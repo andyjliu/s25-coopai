@@ -1,4 +1,5 @@
 import json
+from utils import parse_json
 from typing import List, Dict, Tuple, Optional
 from model_wrappers import ModelWrapper, Message
 from tqdm import tqdm
@@ -7,14 +8,6 @@ import os
 import random
 import argparse
 
-def parse_json(response):
-    try:
-        left = response.index('{')
-        right = response.rindex('}') + 1
-        return json.loads(response[left:right])
-    except (ValueError, json.JSONDecodeError) as e:
-        print(f'Error parsing JSON: {e}')
-        return {}
 
 class Agent:
     """Represents a single LLM agent in the prisoner's dilemma game."""

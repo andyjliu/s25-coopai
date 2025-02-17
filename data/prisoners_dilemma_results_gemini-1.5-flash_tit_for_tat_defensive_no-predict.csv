@@ -1,0 +1,6 @@
+round,agent1_strategy,agent2_strategy,agent1_move,agent2_move,agent1_payoff,agent2_payoff,agent1_prediction,agent2_prediction,agent1_prediction_correct,agent2_prediction_correct,agent1_reasoning,agent2_reasoning
+1,tit_for_tat,defensive,COOPERATE,COOPERATE,3,3,,,,,,
+2,tit_for_tat,defensive,COOPERATE,COOPERATE,3,3,,,,,,
+3,tit_for_tat,defensive,COOPERATE,COOPERATE,3,3,,,,,,
+4,tit_for_tat,defensive,COOPERATE,COOPERATE,3,3,,,,,,
+5,tit_for_tat,defensive,COOPERATE,COOPERATE,3,3,,,,,,

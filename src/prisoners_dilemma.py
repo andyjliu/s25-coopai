@@ -207,7 +207,7 @@ def main():
                         help='Enable move prediction')
     parser.add_argument('--temperature', type=float, default=0.7,
                         help='Temperature for LLM sampling')
-    parser.add_argument('--output', type=str, default='results.csv',
+    parser.add_argument('--output', type=str, default='prisoner_dilemma_results.csv',
                         help='Output file for results CSV')
     
     args = parser.parse_args()
@@ -235,6 +235,8 @@ def main():
         print(f"Agent 2: {results['agent2_prediction_correct'].mean():.2%}")
     
     # Save results
+    if not os.path.exists('data'):
+        os.makedirs('data')
     if os.path.exists(f'data/{args.output}'):
         df = pd.read_csv(f'data/{args.output}')
         results = pd.concat([df, results])

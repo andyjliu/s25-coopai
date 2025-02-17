@@ -4,10 +4,16 @@ from typing import List, Optional, Dict, TypedDict, Any
 import logging
 from tqdm import tqdm
 from utils import gpus_needed
+import os
 
 from openai import OpenAI, APIError
 from anthropic import Anthropic, APIConnectionError, RateLimitError, APIStatusError
-from vllm import LLM, SamplingParams
+from google import genai
+from google.genai import types
+
+import torch
+if torch.cuda.is_available():
+    from vllm import LLM, SamplingParams
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +71,8 @@ class ModelWrapper(ABC):
             return OpenAIClient(model_name, **kwargs)
         elif "claude" in model_name.lower():
             return AnthropicClient(model_name, **kwargs)
+        elif "gemini" in model_name.lower():
+            return GoogleGeminiClient(model_name, **kwargs)
         else:
             return VLLMClient(model_name, **kwargs)
 
@@ -100,7 +108,7 @@ class OpenAIClient(ModelWrapper):
                 self._exponential_backoff(attempt)
 
     def batch_generate(self, messages_list: List[List[Message]]) -> List[str]:
-         #TODO: implement batch API for message_lists that are sufficiently long
+        #TODO: implement batch API for message_lists that are sufficiently long
         responses = []
         for messages in tqdm(messages_list, desc='Batch Generation'):
             responses.append(self.generate(messages))
@@ -190,3 +198,45 @@ class VLLMClient(ModelWrapper):
         formatted_msgs = [self.format_messages_for_llama(messages) for messages in messages_list]
         response = self.llm.generate(formatted_msgs, sampling_params=self.sampling_params)
         return [out.outputs[0].text for out in response]
+
+class GoogleGeminiClient(ModelWrapper):
+    def __init__(self, model_name: str, **kwargs):
+        super().__init__(model_name, **kwargs)
+        self.api_key = os.environ.get("GOOGLE_API_KEY")
+        self.client = genai.Client(api_key=self.api_key)
+        self.model_name = model_name
+    
+    def generate(self, messages: List[Message]) -> str:
+        prompt = self._format_messages(messages)
+        attempt = 0
+        while attempt < self.max_retries:
+            try:
+                response = self.client.models.generate_content(
+                    model = self.model_name,
+                    contents = prompt,
+                    config=types.GenerateContentConfig(
+                        temperature=self.temperature,
+                        max_output_tokens=self.max_tokens,
+                        top_p=self.top_p,
+                        **self.additional_params
+                    )
+                )
+                return response.text
+            except Exception as e:
+                logger.warning(f"Gemini API error (attempt {attempt + 1}/{self.max_retries}): {str(e)} for prompt {messages}")
+                if attempt == self.max_retries - 1:
+                    logger.error(f"Failed after {self.max_retries} attempts: {str(e)}")
+                    return None
+                self._exponential_backoff(attempt)
+                attempt += 1
+        return ""
+    
+    def batch_generate(self, messages_list: List[List[Message]]) -> List[str]:
+        #TODO: call batch API ; https://cloud.google.com/vertex-ai/generative-ai/docs/multimodal/batch-prediction-gemini#generative-ai-batch-text-python_genai_sdk
+        responses = []
+        for messages in messages_list:
+            responses.append(self.generate(messages))
+        return responses
+    
+    def _format_messages(self, messages: List[Message]) -> str:
+        return "\n".join([f"{msg['content']}" for msg in messages])

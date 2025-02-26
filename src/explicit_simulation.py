@@ -184,8 +184,8 @@ The simulated move by your opponent was: {simulation_result['move']}"""
         sim_result2 = self.simulate_agent(self.agent1, game_history) if "SIMULATE" in sim_decision2 else None
 
         # Create decision prompts for both agents
-        prompt1 = self._create_round_decision_prompt(self.agent1, sim_result2, game_history)
-        prompt2 = self._create_round_decision_prompt(self.agent2, sim_result1, game_history)
+        prompt1 = self._create_round_decision_prompt(self.agent1, sim_result1, game_history)
+        prompt2 = self._create_round_decision_prompt(self.agent2, sim_result2, game_history)
         
         # Get responses from both agents
         messages1: List[Message] = [{"role": "user", "content": prompt1}]

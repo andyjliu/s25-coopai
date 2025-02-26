@@ -1,6 +1,6 @@
 MODEL=gemini-1.5-flash
-AGENT1=random
-AGENT2=always_defect
+AGENT1=defensive
+AGENT2=defensive
 
 # uv run src/prisoners_dilemma.py \
 #   --model "$MODEL" \

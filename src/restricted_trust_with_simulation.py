@@ -33,7 +33,7 @@ class RestrictedTrustAgent:
         self.payoffs = payoffs
         self.strategy_descriptions = P1_STRATEGY_DESCRIPTIONS if isinstance(self, SimulatorAgent) else P2_STRATEGY_DESCRIPTIONS
 
-    def get_strategy_elicitation_prompt(self) -> str:
+    def get_strategy_elicitation_prompt(self, default_format=True) -> str:
         raise NotImplementedError("Subclasses should implement this method")
 
     def get_mixed_strategy(self) -> Dict[str, float]:
@@ -65,7 +65,7 @@ class SimulatorAgent(RestrictedTrustAgent):
         self.simulation_cost = simulation_cost
         self.simulation_type = simulation_type
 
-    def get_strategy_elicitation_prompt(self) -> str:
+    def get_strategy_elicitation_prompt(self, default_format=True) -> str:
         """Generate prompt for model to elicit strategy distribution"""
         strategy_descriptions = "\n".join([f"- {s}: {desc}" for s, desc in self.strategy_descriptions.items()])
         
@@ -89,8 +89,8 @@ The payoff table shows your payoff for each combination of your strategy (rows) 
         if self.simulation_type == 'simulate_and_best_response':
             prompt += f"""\nYou may also choose to simulate the other player, which is represented by the additional action 'simulate'. 
 In this case, you will receive the other player's mixed strategy, and automatically play the best response to that strategy. However, this incurs a cost of {self.simulation_cost}"""
-
-        prompt += """\nProvide a probability distribution over your strategies and 'simulate' as a JSON object where keys are strategies and values sum to 1.0.
+        if default_format:
+            prompt += """\nProvide a probability distribution over your strategies and 'simulate' as a JSON object where keys are strategies and values sum to 1.0.
 Example format: {"strategy1": 0.5, "strategy2": 0.3, "simulate": 0.2}"""
         return prompt
 
@@ -124,7 +124,7 @@ class SimulatedAgent(RestrictedTrustAgent):
     ):
         super().__init__(name, model, strategies, payoffs)
 
-    def get_strategy_elicitation_prompt(self) -> str:
+    def get_strategy_elicitation_prompt(self, default_format=True) -> str:
         """Generate prompt for model to elicit strategy distribution"""
         strategy_descriptions = "\n".join([f"- {s}: {desc}" for s, desc in self.strategy_descriptions.items()])
         
@@ -142,10 +142,11 @@ The payoff table shows your payoff for each combination of your strategy (rows) 
         for i, strat in enumerate(self.strategies):
             row = f"{strat:3}|"
             for j in range(len(other_strategies)):
-                row += f"{str(self.payoffs[j][i])}"
+                row += f"{str(self.payoffs[j][i])}\t"
             prompt += row + "\n"
 
-        prompt += """\nProvide a probability distribution over your strategies as a JSON object where keys are strategies and values sum to 1.0.
+        if default_format:
+            prompt += """\nProvide a probability distribution over your strategies as a JSON object where keys are strategies and values sum to 1.0.
 Example format: {"strategy1": 0.5, "strategy2": 0.5}"""
         return prompt
 

@@ -12,6 +12,8 @@ import cvxpy as cp
 import os
 import argparse
 import pdb
+import csv
+from datetime import datetime
 
 
 P1_STRATEGY_DESCRIPTIONS = {
@@ -41,7 +43,8 @@ class RestrictedTrustAgent:
         response = parse_json(self.model.generate([{"role": "user", "content": strategy_elicitation_prompt}]))
         strategy_list = self.strategies + ['simulate'] if isinstance(self, SimulatorAgent) else self.strategies
         try:
-            assert len(response.keys()) == len(strategy_list), "Model response does not match the number of strategies."
+            assert len(response.keys()) > 0 and\
+                abs(1 - sum([float(response.get(k, 0.0)) for k in response.keys()])) < 0.01, "Invalid distribution."
             return(
                 {strategy: response[strategy] for strategy in strategy_list}
             )
@@ -92,6 +95,7 @@ In this case, you will receive the other player's mixed strategy, and automatica
         if default_format:
             prompt += """\nProvide a probability distribution over your strategies and 'simulate' as a JSON object where keys are strategies and values sum to 1.0.
 Example format: {"strategy1": 0.5, "strategy2": 0.3, "simulate": 0.2}"""
+        prompt += "\nOnly provide the JSON object, without any additional text."
         return prompt
 
     def compute_best_response(self, payoff_matrix: np.ndarray, other_strategy: Dict[str, float], 
@@ -315,6 +319,10 @@ class RestrictedTrustGame:
                 "strategy_frequencies": {
                     "P1": {s: 0 for s in self.p1_strategies},
                     "P2": {s: 0 for s in self.p2_strategies}
+                },
+                "strategy_probabilities": {
+                    "P1": {s: 0 for s in self.p1_strategies + ['simulate']},
+                    "P2": {s: 0 for s in self.p2_strategies}
                 }
             }
         
@@ -327,7 +335,7 @@ class RestrictedTrustGame:
         p2_choices = [round['p2_choice'] for round in self.history]
 
         p1_strategies = [round['p1_strategy'] for round in self.history]
-        p2_strategies = [round['p2_strategy'] for round in self.history]  # Fixed typo here
+        p2_strategies = [round['p2_strategy'] for round in self.history]
         
         simulation_count = sum(1 for choice in p1_choices if choice == 'simulate')
         simulation_frequency = simulation_count / rounds_played if rounds_played > 0 else 0
@@ -335,6 +343,15 @@ class RestrictedTrustGame:
         # Calculate average gain from simulating
         simulation_gains = [round.get('p1_gain_from_simulating', 0) for round in self.history]
         avg_simulation_gain = sum(simulation_gains) / len(simulation_gains)
+        
+        # Calculate average probability mass for each strategy (NEW)
+        p1_avg_probabilities = {}
+        for strategy in self.p1_strategies + ['simulate']:
+            p1_avg_probabilities[strategy] = sum(strat.get(strategy, 0) for strat in p1_strategies) / rounds_played
+            
+        p2_avg_probabilities = {}
+        for strategy in self.p2_strategies:
+            p2_avg_probabilities[strategy] = sum(strat.get(strategy, 0) for strat in p2_strategies) / rounds_played
         
         summary = {
             "rounds_played": rounds_played,
@@ -348,25 +365,110 @@ class RestrictedTrustGame:
                 "P1": {
                     "initial_choices": {
                         s: p1_choices.count(s) / rounds_played 
-                        for s in self.p1_strategies
+                        for s in self.p1_strategies + ['simulate']
                     },
                     "final_moves": {
                         s: p1_moves.count(s) / rounds_played
-                        for s in [m for m in self.p1_strategies if m != 'simulate']
-                    },
-                    "strategies": p1_strategies
+                        for s in self.p1_strategies
+                    }
                 },
                 "P2": {
                     "choices": {
                         s: p2_choices.count(s) / rounds_played 
                         for s in self.p2_strategies
-                    },
-                    "strategies": p2_strategies
+                    }
                 }
-            }
+            },
+            "strategy_probabilities": {
+                "P1": p1_avg_probabilities,
+                "P2": p2_avg_probabilities
+            },
+            "all_p1_strategies": p1_strategies,
+            "all_p2_strategies": p2_strategies
         }
         
         return summary
+
+    def write_summary_to_csv(self, csv_path: str, args=None):
+        """
+        Write each individual game round to a CSV file as separate rows
+        If the file doesn't exist, create it with headers
+        If it exists, append the new rows
+        
+        Args:
+            csv_path: Path to CSV file
+            args: Optional argparse namespace with experiment parameters
+        """
+        
+        # Check if file exists to determine if headers need to be written
+        file_exists = os.path.isfile(csv_path)
+        
+        # Define all possible column names
+        columns = [
+            # Round data
+            "timestamp",
+            "round_index",
+            "p1_choice",
+            "p1_move",
+            "p2_choice",
+            "p1_payoff",
+            "p2_payoff",
+            "p1_gain_from_simulating"
+        ]
+        
+        # Add P1 strategy probability columns
+        for strategy in self.p1_strategies + ['simulate']:
+            columns.append(f"p1_prob_{strategy}")
+            
+        # Add P2 strategy probability columns
+        for strategy in self.p2_strategies:
+            columns.append(f"p2_prob_{strategy}")
+            
+        # Add command line arguments if provided
+        if args:
+            for arg in vars(args):
+                columns.append(f"arg_{arg}")
+        
+        # Prepare data for writing
+        rows = []
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        for round_idx, round_data in enumerate(self.history):
+            row = {
+                "timestamp": timestamp,
+                "round_index": round_idx,
+                "p1_choice": round_data["p1_choice"],
+                "p1_move": round_data["p1_move"],
+                "p2_choice": round_data["p2_choice"],
+                "p1_payoff": round_data["p1_payoff"],
+                "p2_payoff": round_data["p2_payoff"],
+                "p1_gain_from_simulating": round_data["p1_gain_from_simulating"]
+            }
+            
+            # Add P1 strategy probabilities for this round
+            for strategy in self.p1_strategies + ['simulate']:
+                row[f"p1_prob_{strategy}"] = round_data["p1_strategy"].get(strategy, 0)
+                
+            # Add P2 strategy probabilities for this round
+            for strategy in self.p2_strategies:
+                row[f"p2_prob_{strategy}"] = round_data["p2_strategy"].get(strategy, 0)
+                
+            # Add command line arguments if provided
+            if args:
+                for arg, value in vars(args).items():
+                    row[f"arg_{arg}"] = value
+                    
+            rows.append(row)
+        
+        # Write to CSV
+        with open(csv_path, 'a', newline='') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=columns)
+            
+            # Write headers only if file is new
+            if not file_exists:
+                writer.writeheader()
+                
+            # Write all rows
+            writer.writerows(rows)
 
 def main():
     parser = argparse.ArgumentParser(description='Simulate a Restricted Trust Game')
@@ -384,8 +486,8 @@ def main():
                         choices=['simulate_and_best_response'], help='Type of simulation')
     
     # Output parameters
-    parser.add_argument('--output_file', type=str, default='game_results.json', 
-                        help='File to save game results')
+    parser.add_argument('--csv_output', type=str, default='game_results.csv',
+                        help='File to save game summary statistics as CSV')
     parser.add_argument('--verbose', action='store_true', help='Print detailed output')
     
     args = parser.parse_args()
@@ -433,14 +535,20 @@ def main():
         print(f"Rounds played: {results['rounds_played']}")
         print(f"Average payoffs: P1={results['average_payoffs'][0]:.2f}, P2={results['average_payoffs'][1]:.2f}")
         print(f"Simulation frequency: {results['simulation_frequency']:.2%}")
-        print(f"Average gain from simulating: {results['average_simulation_gain']}")
-    
-    # Save results to file
-    with open(args.output_file, 'w') as f:
-        json.dump(results, f, indent=2)
+        print(f"Average gain from simulating: {results['average_simulation_gain']:.2f}")
+        print(f"\nStrategy Frequencies:")
+        print(f"P1 initial choices: {results['strategy_frequencies']['P1']['initial_choices']}")
+        print(f"P1 final moves: {results['strategy_frequencies']['P1']['final_moves']}")
+        print(f"P2 choices: {results['strategy_frequencies']['P2']['choices']}")
+        print(f"\nAverage Strategy Probabilities:")
+        print(f"P1: {results['strategy_probabilities']['P1']}")
+        print(f"P2: {results['strategy_probabilities']['P2']}")
+
+    # Save summary to CSV file (NEW)
+    game.write_summary_to_csv(args.csv_output, args)
     
     if args.verbose:
-        print(f"Results saved to {args.output_file}")
+        print(f"Summary statistics saved to {args.csv_output}")
     
     return results
 

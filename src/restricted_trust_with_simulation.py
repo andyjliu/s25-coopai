@@ -1,6 +1,6 @@
 import json
 from typing import List, Dict, Tuple, Optional
-from utils import parse_json
+from utils import parse_json, solve_stackelberg_game
 from model_wrappers import ModelWrapper, Message
 from tqdm import tqdm
 
@@ -249,6 +249,21 @@ class RestrictedTrustGame:
         prob.solve(solver='GLPK_MI')
         return(u_x.value, u_y.value)
 
+    def stackelberg_equilibrium(self) -> Tuple[Dict[str, float], Dict[str, float], float, float]:
+        """
+        Compute the Stackelberg equilibrium where Player 2 is the leader and Player 1 is the follower.
+        
+        Returns:
+            Tuple of (P1 strategy dict, P2 strategy dict, P1 payoff, P2 payoff)
+        """
+        p1_strategy, p2_strategy, p1_payoff, p2_payoff = solve_stackelberg_game(self.p1_payoffs, self.p2_payoffs)
+        
+        # Convert numpy arrays to dictionaries
+        p1_strategy_dict = {s: p for s, p in zip(self.p1_strategies, p1_strategy)}
+        p2_strategy_dict = {s: p for s, p in zip(self.p2_strategies, p2_strategy)}
+        
+        return p1_strategy_dict, p2_strategy_dict, p1_payoff, p2_payoff
+
     def gain_from_simulating(self, p2_strategy: Dict[str, float]) -> float:
         """
         Calculate the gain from simulating P2's strategy and playing the best response,
@@ -323,6 +338,12 @@ class RestrictedTrustGame:
                 "strategy_probabilities": {
                     "P1": {s: 0 for s in self.p1_strategies + ['simulate']},
                     "P2": {s: 0 for s in self.p2_strategies}
+                },
+                "stackelberg_equilibrium": {
+                    "p1_strategy": {s: 0 for s in self.p1_strategies},
+                    "p2_strategy": {s: 0 for s in self.p2_strategies},
+                    "p1_payoff": 0,
+                    "p2_payoff": 0
                 }
             }
         
@@ -342,9 +363,9 @@ class RestrictedTrustGame:
         
         # Calculate average gain from simulating
         simulation_gains = [round.get('p1_gain_from_simulating', 0) for round in self.history]
-        avg_simulation_gain = sum(simulation_gains) / len(simulation_gains)
+        avg_simulation_gain = sum(simulation_gains) / len(simulation_gains) if simulation_gains else 0
         
-        # Calculate average probability mass for each strategy (NEW)
+        # Calculate average probability mass for each strategy
         p1_avg_probabilities = {}
         for strategy in self.p1_strategies + ['simulate']:
             p1_avg_probabilities[strategy] = sum(strat.get(strategy, 0) for strat in p1_strategies) / rounds_played
@@ -353,6 +374,9 @@ class RestrictedTrustGame:
         for strategy in self.p2_strategies:
             p2_avg_probabilities[strategy] = sum(strat.get(strategy, 0) for strat in p2_strategies) / rounds_played
         
+        # Compute Stackelberg equilibrium
+        p1_stackelberg, p2_stackelberg, p1_stackelberg_payoff, p2_stackelberg_payoff = self.stackelberg_equilibrium()
+        
         summary = {
             "rounds_played": rounds_played,
             "average_payoffs": (
@@ -360,7 +384,7 @@ class RestrictedTrustGame:
                 sum(p2_payoffs) / rounds_played
             ),
             "simulation_frequency": simulation_frequency,
-            "average_simulation_gain": (avg_simulation_gain),
+            "average_simulation_gain": avg_simulation_gain,
             "strategy_frequencies": {
                 "P1": {
                     "initial_choices": {
@@ -382,6 +406,12 @@ class RestrictedTrustGame:
             "strategy_probabilities": {
                 "P1": p1_avg_probabilities,
                 "P2": p2_avg_probabilities
+            },
+            "stackelberg_equilibrium": {
+                "p1_strategy": p1_stackelberg,
+                "p2_strategy": p2_stackelberg,
+                "p1_payoff": p1_stackelberg_payoff,
+                "p2_payoff": p2_stackelberg_payoff
             },
             "all_p1_strategies": p1_strategies,
             "all_p2_strategies": p2_strategies
@@ -424,10 +454,20 @@ class RestrictedTrustGame:
         for strategy in self.p2_strategies:
             columns.append(f"p2_prob_{strategy}")
             
+        # Add Stackelberg equilibrium columns
+        for strategy in self.p1_strategies:
+            columns.append(f"stackelberg_p1_prob_{strategy}")
+        for strategy in self.p2_strategies:
+            columns.append(f"stackelberg_p2_prob_{strategy}")
+        columns.extend(["stackelberg_p1_payoff", "stackelberg_p2_payoff"])
+            
         # Add command line arguments if provided
         if args:
             for arg in vars(args):
                 columns.append(f"arg_{arg}")
+        
+        # Get Stackelberg equilibrium
+        p1_stackelberg, p2_stackelberg, p1_stackelberg_payoff, p2_stackelberg_payoff = self.stackelberg_equilibrium()
         
         # Prepare data for writing
         rows = []
@@ -451,6 +491,14 @@ class RestrictedTrustGame:
             # Add P2 strategy probabilities for this round
             for strategy in self.p2_strategies:
                 row[f"p2_prob_{strategy}"] = round_data["p2_strategy"].get(strategy, 0)
+                
+            # Add Stackelberg equilibrium probabilities and payoffs
+            for strategy in self.p1_strategies:
+                row[f"stackelberg_p1_prob_{strategy}"] = p1_stackelberg.get(strategy, 0)
+            for strategy in self.p2_strategies:
+                row[f"stackelberg_p2_prob_{strategy}"] = p2_stackelberg.get(strategy, 0)
+            row["stackelberg_p1_payoff"] = p1_stackelberg_payoff
+            row["stackelberg_p2_payoff"] = p2_stackelberg_payoff
                 
             # Add command line arguments if provided
             if args:

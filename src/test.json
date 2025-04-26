@@ -1,14 +1,32 @@
-{
-  "trust": {
-    "cooperate": [3, 3],
-    "defect": [0, 5]
+[
+  {
+    "trust": {
+      "cooperate": [3, 3],
+      "defect": [-2, 5]
+    },
+    "partial_trust": {
+      "cooperate": [2, 2],
+      "defect": [-1, 3]
+    },
+    "walk_out": {
+      "cooperate": [0, 0],
+      "defect": [0, 0]
+    },
+    "simulation_cost": 1
   },
-  "partial_trust": {
-    "cooperate": [2, 2],
-    "defect": [1, 3]
-  },
-  "walk_out": {
-    "cooperate": [1, 1],
-    "defect": [1, 1]
+  {
+    "trust": {
+      "cooperate": [10, 5],
+      "defect": [-10, 6]
+    },
+    "partial_trust": {
+      "cooperate": [1, 1],
+      "defect": [-1, 2]
+    },
+    "walk_out": {
+      "cooperate": [0, 0],
+      "defect": [0, 0]
+    },
+    "simulation_cost": 1
   }
-}
+]

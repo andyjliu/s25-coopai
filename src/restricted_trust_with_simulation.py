@@ -342,8 +342,9 @@ class RestrictedTrustGame:
             'p2_payoff': p2_payoff,
             'p1_strategy': p1_strategy,
             'p2_strategy': p2_strategy,
-            'p1_gain_from_simulating': self.gain_from_simulating(p2_strategy),
+            'p1_gain_from_simulating': self.gain_from_simulating(),
             'p2_simulation_strategy': None if p1_choice != 'simulate' else p2_simulation_strategy,
+            'p1_simulation_error': None if p1_choice != 'simulate' else self.simulation_error(p2_strategy, p2_simulation_strategy)
         })
 
     def simulate_rounds(self, num_rounds: int):
@@ -400,29 +401,23 @@ class RestrictedTrustGame:
         
         return p1_strategy_dict, p2_strategy_dict, p1_payoff, p2_payoff
 
-    def gain_from_simulating(self, p2_strategy: Dict[str, float]) -> float:
+    def gain_from_simulating(self) -> float:
         """
         Calculate the gain from simulating P2's strategy and playing the best response,
         compared to the equilibrium payoff without simulation.
         """
-        # Convert p2_strategy dict to a probability vector
-        p2_probs = np.array([p2_strategy.get(s, 0) for s in self.p2_strategies])
-        
-        # Compute best response to p2's strategy
-        best_response_dict = self.p1.compute_best_response(self.p1_payoffs, p2_strategy, self.p1_strategies)
-        best_response_probs = np.array([best_response_dict.get(s, 0) for s in self.p1_strategies])
-        
-        # Calculate payoff from best response
-        best_response_payoff = best_response_probs @ self.p1_payoffs @ p2_probs
-        
-        # Get payoff without simulating
-
-        eq_payoff, _ = self.equilibrium_payoffs()
-        
-        # Calculate gain (considering simulation cost)
-        gain = best_response_payoff - eq_payoff.item() - self.simulation_cost
+        _, _, eq_payoff, _ = self.stackelberg_equilibrium()
+        gain = eq_payoff.item() - self.simulation_cost
         return gain
-
+    
+    def simulation_error(self, p2_strategy: Dict[str, float], p2_simulation_strategy: Dict[str, float]) -> float:
+        """
+        Calculate the accuracy of the simulation by comparing the predicted and actual distributions of P2's strategy.
+        """
+        p2_strategy_probs = np.array([p2_strategy.get(s, 0) for s in self.p2_strategies])
+        p2_simulation_strategy_probs = np.array([p2_simulation_strategy.get(s, 0) for s in self.p2_strategies])
+        return(np.mean(np.abs(p2_strategy_probs - p2_simulation_strategy_probs)))
+        
     def get_expected_payoffs(self, p1_strategy: Dict[str, float], p2_strategy: Dict[str, float]) -> Tuple[float, float]:
         """
         Calculate expected payoffs given mixed strategies for both players.
@@ -463,6 +458,7 @@ class RestrictedTrustGame:
     def get_game_summary(self) -> Dict:
         """Return summary statistics of the game outcome"""
         if not self.history:
+            p1_stackelberg, p2_stackelberg, p1_stackelberg_payoff, p2_stackelberg_payoff = self.stackelberg_equilibrium()
             return {
                 "rounds_played": 0,
                 "average_payoffs": (0, 0),
@@ -476,11 +472,11 @@ class RestrictedTrustGame:
                     "P2": {s: 0 for s in self.p2_strategies}
                 },
                 "stackelberg_equilibrium": {
-                    "p1_strategy": {s: 0 for s in self.p1_strategies},
-                    "p2_strategy": {s: 0 for s in self.p2_strategies},
-                    "p1_payoff": 0,
-                    "p2_payoff": 0
-                }
+                "p1_strategy": p1_stackelberg,
+                "p2_strategy": p2_stackelberg,
+                "p1_payoff": p1_stackelberg_payoff,
+                "p2_payoff": p2_stackelberg_payoff
+                },
             }
         
         rounds_played = len(self.history)
@@ -498,6 +494,10 @@ class RestrictedTrustGame:
         
         simulation_count = sum(1 for choice in p1_choices if choice == 'simulate')
         simulation_frequency = simulation_count / rounds_played if rounds_played > 0 else 0
+        if simulation_count > 0:
+            p1_simulation_error = sum(round.get('p1_simulation_error', 0) for round in self.history if round['p1_choice'] == 'simulate') / simulation_count
+        else:
+            p1_simulation_error = None
         
         # Calculate average gain from simulating
         simulation_gains = [round.get('p1_gain_from_simulating', 0) for round in self.history]
@@ -513,11 +513,10 @@ class RestrictedTrustGame:
             p2_avg_probabilities[strategy] = sum(strat.get(strategy, 0) for strat in p2_strategies) / rounds_played
         
         p2_avg_simulated_probabilities = {strategy: 0 for strategy in self.p2_strategies}
-        rounds_simulated = sum(1 for strat in p2_simulation_strategies if strat is not None)
         for strategy in self.p2_strategies:
             for strat in p2_simulation_strategies:
                 if strat is not None:
-                    p2_avg_simulated_probabilities[strategy] += strat.get(strategy, 0) / rounds_simulated
+                    p2_avg_simulated_probabilities[strategy] += strat.get(strategy, 0) / simulation_count
         
         # Compute Stackelberg equilibrium
         p1_stackelberg, p2_stackelberg, p1_stackelberg_payoff, p2_stackelberg_payoff = self.stackelberg_equilibrium()
@@ -561,7 +560,8 @@ class RestrictedTrustGame:
             },
             "all_p1_strategies": p1_strategies,
             "all_p2_strategies": p2_strategies,
-            "all_p2_simulated_strategies": p2_simulation_strategies
+            "all_p2_simulated_strategies": p2_simulation_strategies,
+            "p1_simulation_error": p1_simulation_error
         }
         
         return summary
@@ -590,7 +590,8 @@ class RestrictedTrustGame:
             "p2_choice",
             "p1_payoff",
             "p2_payoff",
-            "p1_gain_from_simulating"
+            "p1_gain_from_simulating",
+            "p1_simulation_error"
         ]
         
         # Add P1 strategy probability columns
@@ -628,7 +629,8 @@ class RestrictedTrustGame:
                 "p2_choice": round_data["p2_choice"],
                 "p1_payoff": round_data["p1_payoff"],
                 "p2_payoff": round_data["p2_payoff"],
-                "p1_gain_from_simulating": round_data["p1_gain_from_simulating"]
+                "p1_gain_from_simulating": round_data["p1_gain_from_simulating"],
+                "p1_simulation_error": round_data["p1_simulation_error"]
             }
             
             # Add P1 strategy probabilities for this round
@@ -745,6 +747,8 @@ def main():
         print(f"P1: {results['strategy_probabilities']['P1']}")
         print(f"P2: {results['strategy_probabilities']['P2']}")
         print(f"P2 simulated: {results['strategy_probabilities']['P2_simulated']}")
+        if results['p1_simulation_error'] is not None:
+            print(f"Mean simulation error: {results['p1_simulation_error']:.2f}")
 
     # Save summary to CSV file (NEW)
     game.write_summary_to_csv(args.csv_output, args)

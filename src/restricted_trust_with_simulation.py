@@ -96,31 +96,69 @@ class SimulatorAgent(RestrictedTrustAgent):
         """Generate prompt for model to elicit strategy distribution"""
         strategy_descriptions = "\n".join([f"- {s}: {desc}" for s, desc in self.strategy_descriptions.items()])
         
-        prompt = f"""You are playing a restricted trust game as {self.name}. Your available strategies are:
+        prompt = f"""You are playing a restricted trust game. In this game, P1 (the simulator) can choose to trust, partially trust, or walk out.
+If P1 walks out, both players will receive a payoff of 0.
+If P1 does not walk out, they will share a portion of their resources with P2 (the simulated player). Trust enables profits for both players if P2 cooperates, but P2 can defect and gain a higher payoff for themselves, at the expense of P1, who will receive a negative payoff.
+P1 may be able to simulate P2 (gaining access to their mixed strategy) and respond accordingly. P2 may not be aware that they are being simulated.
+        
+You are {self.name}. Your available strategies are:
 {strategy_descriptions}
 
-The payoff table shows your payoff for each combination of your strategy (rows) and the other player's strategy (columns):
+Below are your payoff and the other player's payoff for each combination of strategies:
 """
         
-        # Format payoff table
+        # Format payoffs as a list of combinations
         other_strategies = P2_STRATEGY_DESCRIPTIONS.keys() if isinstance(self, SimulatorAgent) else P1_STRATEGY_DESCRIPTIONS.keys()
-        prompt += "\n   |" + " ".join(f"{s:12}" for s in other_strategies) + "\n"
-        prompt += "---+" + "------------" * len(other_strategies) + "\n"
-
-        for i, strat in enumerate(self.strategies):
-            row = f"{strat:3}|"
-            for j in range(len(other_strategies)):
-                row += f"\t{str(self.payoffs[i][j])}"
-            prompt += row + "\n"
+        for i, my_strat in enumerate(self.strategies):
+            for j, other_strat in enumerate(other_strategies):
+                prompt += f"\nIf you play {my_strat} and the other player plays {other_strat}:"
+                prompt += f"\n- Your payoff: {self.payoffs[i][j]}"
+                prompt += f"\n- Other player's payoff: {self.p2_payoffs[i][j]}"
 
         prompt += f"""\nYou may also choose to simulate the other player, which is represented by the additional action 'simulate'. In this case, you will receive the other player's mixed strategy as collected from the simulation, and automatically play the best response to that strategy. However, simulating incurs a cost of {self.simulation_cost}."""
-        
         if default_format:
-            prompt += """\nProvide a probability distribution over your strategies and 'simulate' as a JSON object where keys are strategies and values sum to 1.0. All strategies must be in the JSON; if a strategy is not selected, its value should be 0.0.
-Example format: {"strategy1": 0.5, "strategy2": 0.3, "simulate": 0.2}"""
+            prompt += """\nReturn a JSON dictionary, where the keys are 'simulate' (lower-case boolean; true or false) and 'strategy' (a dictionary where keys are strategies and values sum to 1.0). All strategies should be in the JSON; if a strategy is not selected, its value should be 0.0.
+If 'simulate' is set to true, you will simulate the other player and play the best response to their strategy, but you will also pay a cost of {self.simulation_cost}.
+If 'simulate' is set to false, you will play the mixed strategy given by the 'strategy' key.
+Example format: {"simulate": False, "strategy": {"trust": 0.3, "partial_trust": 0.4, "walk_out": 0.3}}"""
         prompt += "\nOnly provide the JSON object, without any additional text."
         
         return prompt
+    
+    def get_mixed_strategy(self, custom_prompt=None) -> Dict[str, float]:
+        if custom_prompt is not None:
+            strategy_elicitation_prompt = custom_prompt
+        else:
+            strategy_elicitation_prompt = self.get_strategy_elicitation_prompt()
+        response = parse_json(self.model.generate([{"role": "user", "content": strategy_elicitation_prompt}]))
+        if response.get('simulate', False):
+            return({'simulate': 1.0})
+        else:
+            strategy_list = self.strategies
+            
+        try:
+            response = response.get('strategy', {})
+            assert len(response.keys()) > 0 and\
+                abs(1 - sum([float(response.get(k, 0.0)) for k in response.keys()])) < 0.01, "Invalid distribution."
+            return(
+                {strategy: response[strategy] for strategy in strategy_list}
+            )
+        except (AssertionError, KeyError) as e:
+            print(f"Error {e} processing model response: {response}. Attempting to rectify.")
+            for strategy in strategy_list:
+                if strategy not in response:
+                    response[strategy] = 0.0
+            if abs(1 - sum([float(response.get(k, 0.0)) for k in response.keys()])) > 0.01:
+                print(f"Invalid distribution after rectification: {response}. Using uniform distribution.")
+                return(
+                    {strategy: 1.0/len(strategy_list) for strategy in strategy_list}
+                )
+            else:
+                print(f"Distribution after rectification: {response}.")
+                return(
+                    {strategy: response[strategy] for strategy in strategy_list}
+                )
+        
 
     def _build_simulation_prompt(self, p1_strategy: Dict[str, float], other_context: str) -> str:
         """
@@ -131,17 +169,16 @@ Example format: {"strategy1": 0.5, "strategy2": 0.3, "simulate": 0.2}"""
         prompt += f"You selected the following mixed strategy: ```{p1_strategy}```\n"
         prompt += f"The 'simulate' action was chosen and the simulation will proceed as follows: {other_context}\n\n"
         
-        prompt+="""\nTo help you improve simulation accuracy, below is the payoff table for the other player for your reference.\n"""
-        p2_strategies = P2_STRATEGY_DESCRIPTIONS.keys()
-        prompt += "\n   |" + " ".join(f"{s:12}" for s in self.strategies) + "\n"
-        prompt += "---+" + "------------" * len(p2_strategies) + "\n"
-
-        for i, strat in enumerate(p2_strategies):
-            row = f"{strat:3}|"
-            for j in range(len(self.strategies)):
-                row += f"\t{str(self.p2_payoffs[j][i])}"
-            prompt += row + "\n"            
+        prompt += "\nTo help you improve simulation accuracy, below are the payoffs for the other player for your reference.\n"
         
+        # Format payoffs as a list of combinations
+        other_strategies = P2_STRATEGY_DESCRIPTIONS.keys() if isinstance(self, SimulatorAgent) else P1_STRATEGY_DESCRIPTIONS.keys()
+        
+        for i, my_strat in enumerate(self.strategies):
+            for j, other_strat in enumerate(other_strategies):
+                prompt += f"\nIf you play {my_strat} and the other player plays {other_strat}:"
+                prompt += f"\n- Other player's payoff: {self.p2_payoffs[i][j]}"
+
         if self.simulation_type == "simulate_internally":
             prompt += "\nPlease provide as a single JSON dictionary:\n"
             prompt += "  (1) A description of your reasoning and any computations (under the \"rationale\" key).\n"
@@ -216,23 +253,22 @@ class SimulatedAgent(RestrictedTrustAgent):
         """Generate prompt for model to elicit strategy distribution"""
         strategy_descriptions = "\n".join([f"- {s}: {desc}" for s, desc in self.strategy_descriptions.items()])
         
-        prompt = f"""You are playing a restricted trust game as {self.name}. Your available strategies are:
+        prompt = f"""You are playing a restricted trust game. In this game, P1 (the simulator) can choose to trust, partially trust, or walk out.
+If P1 walks out, both players will receive a payoff of 0.
+If P1 does not walk out, they will share a portion of their resources with P2 (the simulated player). Trust enables profits for both players if P2 cooperates, but P2 can defect and gain a higher payoff for themselves, at the expense of P1, who will receive a negative payoff.
+P1 may be able to simulate P2 (gaining access to their mixed strategy) and respond accordingly. P2 may not be aware that they are being simulated.  
+
+You are {self.name}. Your available strategies are:
 {strategy_descriptions}
 
-The payoff table shows your payoff for each combination of your strategy (rows) and the other player's strategy (columns):
+Below is your payoff for each combination of strategies:
 """
-        
-        # Format payoff table
         other_strategies = P2_STRATEGY_DESCRIPTIONS.keys() if isinstance(self, SimulatorAgent) else P1_STRATEGY_DESCRIPTIONS.keys()
-        prompt += "\n   |" + " ".join(f"{s:12}" for s in other_strategies) + "\n"
-        prompt += "---+" + "------------" * len(other_strategies) + "\n"
-        
-        for i, strat in enumerate(self.strategies):
-            row = f"{strat:3}|"
-            for j in range(len(other_strategies)):
-                row += f"\t{str(self.payoffs[j][i])}"
-            prompt += row + "\n"
-
+        for i, my_strat in enumerate(self.strategies):
+            for j, other_strat in enumerate(other_strategies):
+                prompt += f"\nIf you play {my_strat} and the other player plays {other_strat}:"
+                prompt += f"\n- Your payoff: {self.payoffs[j][i]}"
+                # prompt += f"\n- Other player's payoff: {self.p2_payoffs[j][i]}"
         if default_format:
             prompt += """\nProvide a probability distribution over your strategies as a JSON object where keys are strategies and values sum to 1.0. If a strategy is not selected, its value should be 0.0.
 Example format: {"strategy1": 0.5, "strategy2": 0.5}"""
@@ -267,8 +303,8 @@ class RestrictedTrustGame:
     def simulate_round(self):
         p1_strategy = self.p1.get_mixed_strategy()
         p2_strategy = self.p2.get_mixed_strategy()
-
-        p1_choice = np.random.choice(self.p1_strategies + ['simulate'], p=list(p1_strategy.values()))
+        
+        p1_choice = np.random.choice(list(p1_strategy.keys()), p=list(p1_strategy.values()))
         
         if p1_choice == 'simulate':
             if self.simulation_type == 'simulate_and_best_response' or self.simulation_type == 'simulate_externally':
@@ -286,16 +322,16 @@ class RestrictedTrustGame:
             p1_best_response = self.p1.compute_best_response(self.p1_payoffs, p2_simulation_strategy, self.p1_strategies)
             p1_move = np.random.choice(self.p1_strategies, p=list(p1_best_response.values()))
         else:
-            p1_move = p1_choice
+            p1_move = np.random.choice(self.p1_strategies, p=list(p1_strategy.values()))
 
         if p1_choice == 'simulate' and self.simulation_type == 'simulate_externally':
             # requery p2 for their "real-world" strategy
             p2_strategy = self.p2.get_mixed_strategy()
 
-        p2_choice = np.random.choice(self.p2_strategies, p=list(p2_strategy.values()))
+        p2_choice = np.random.choice(list(p2_strategy.keys()), p=list(p2_strategy.values()))
 
         p1_payoff = self.p1_payoffs[self.p1_strategies.index(p1_move), self.p2_strategies.index(p2_choice)]
-        if p1_choice == "simulate":
+        if p1_choice == 'simulate':
             p1_payoff -= self.simulation_cost
         p2_payoff = self.p2_payoffs[self.p1_strategies.index(p1_move), self.p2_strategies.index(p2_choice)]
 
@@ -307,8 +343,9 @@ class RestrictedTrustGame:
             'p2_payoff': p2_payoff,
             'p1_strategy': p1_strategy,
             'p2_strategy': p2_strategy,
-            'p1_gain_from_simulating': self.gain_from_simulating(p2_strategy),
+            'p1_gain_from_simulating': self.gain_from_simulating(),
             'p2_simulation_strategy': None if p1_choice != 'simulate' else p2_simulation_strategy,
+            'p1_simulation_error': None if p1_choice != 'simulate' else self.simulation_error(p2_strategy, p2_simulation_strategy),
             'p2_simulation_prompt': None if p1_choice != 'simulate' or self.simulation_type != 'simulate_via_prompting' else p2_simulation_prompt
         })
 
@@ -366,29 +403,23 @@ class RestrictedTrustGame:
         
         return p1_strategy_dict, p2_strategy_dict, p1_payoff, p2_payoff
 
-    def gain_from_simulating(self, p2_strategy: Dict[str, float]) -> float:
+    def gain_from_simulating(self) -> float:
         """
         Calculate the gain from simulating P2's strategy and playing the best response,
         compared to the equilibrium payoff without simulation.
         """
-        # Convert p2_strategy dict to a probability vector
-        p2_probs = np.array([p2_strategy.get(s, 0) for s in self.p2_strategies])
-        
-        # Compute best response to p2's strategy
-        best_response_dict = self.p1.compute_best_response(self.p1_payoffs, p2_strategy, self.p1_strategies)
-        best_response_probs = np.array([best_response_dict.get(s, 0) for s in self.p1_strategies])
-        
-        # Calculate payoff from best response
-        best_response_payoff = best_response_probs @ self.p1_payoffs @ p2_probs
-        
-        # Get payoff without simulating
-
-        eq_payoff, _ = self.equilibrium_payoffs()
-        
-        # Calculate gain (considering simulation cost)
-        gain = best_response_payoff - eq_payoff.item() - self.simulation_cost
+        _, _, eq_payoff, _ = self.stackelberg_equilibrium()
+        gain = eq_payoff.item() - self.simulation_cost
         return gain
-
+    
+    def simulation_error(self, p2_strategy: Dict[str, float], p2_simulation_strategy: Dict[str, float]) -> float:
+        """
+        Calculate the accuracy of the simulation by comparing the predicted and actual distributions of P2's strategy.
+        """
+        p2_strategy_probs = np.array([p2_strategy.get(s, 0) for s in self.p2_strategies])
+        p2_simulation_strategy_probs = np.array([p2_simulation_strategy.get(s, 0) for s in self.p2_strategies])
+        return(np.mean(np.abs(p2_strategy_probs - p2_simulation_strategy_probs)))
+        
     def get_expected_payoffs(self, p1_strategy: Dict[str, float], p2_strategy: Dict[str, float]) -> Tuple[float, float]:
         """
         Calculate expected payoffs given mixed strategies for both players.
@@ -429,6 +460,7 @@ class RestrictedTrustGame:
     def get_game_summary(self) -> Dict:
         """Return summary statistics of the game outcome"""
         if not self.history:
+            p1_stackelberg, p2_stackelberg, p1_stackelberg_payoff, p2_stackelberg_payoff = self.stackelberg_equilibrium()
             return {
                 "rounds_played": 0,
                 "average_payoffs": (0, 0),
@@ -442,11 +474,11 @@ class RestrictedTrustGame:
                     "P2": {s: 0 for s in self.p2_strategies}
                 },
                 "stackelberg_equilibrium": {
-                    "p1_strategy": {s: 0 for s in self.p1_strategies},
-                    "p2_strategy": {s: 0 for s in self.p2_strategies},
-                    "p1_payoff": 0,
-                    "p2_payoff": 0
-                }
+                "p1_strategy": p1_stackelberg,
+                "p2_strategy": p2_stackelberg,
+                "p1_payoff": p1_stackelberg_payoff,
+                "p2_payoff": p2_stackelberg_payoff
+                },
             }
         
         rounds_played = len(self.history)
@@ -464,6 +496,10 @@ class RestrictedTrustGame:
         
         simulation_count = sum(1 for choice in p1_choices if choice == 'simulate')
         simulation_frequency = simulation_count / rounds_played if rounds_played > 0 else 0
+        if simulation_count > 0:
+            p1_simulation_error = sum(round.get('p1_simulation_error', 0) for round in self.history if round['p1_choice'] == 'simulate') / simulation_count
+        else:
+            p1_simulation_error = None
         
         # Calculate average gain from simulating
         simulation_gains = [round.get('p1_gain_from_simulating', 0) for round in self.history]
@@ -479,11 +515,10 @@ class RestrictedTrustGame:
             p2_avg_probabilities[strategy] = sum(strat.get(strategy, 0) for strat in p2_strategies) / rounds_played
         
         p2_avg_simulated_probabilities = {strategy: 0 for strategy in self.p2_strategies}
-        rounds_simulated = sum(1 for strat in p2_simulation_strategies if strat is not None)
         for strategy in self.p2_strategies:
             for strat in p2_simulation_strategies:
                 if strat is not None:
-                    p2_avg_simulated_probabilities[strategy] += strat.get(strategy, 0) / rounds_simulated
+                    p2_avg_simulated_probabilities[strategy] += strat.get(strategy, 0) / simulation_count
         
         # Compute Stackelberg equilibrium
         p1_stackelberg, p2_stackelberg, p1_stackelberg_payoff, p2_stackelberg_payoff = self.stackelberg_equilibrium()
@@ -527,7 +562,8 @@ class RestrictedTrustGame:
             },
             "all_p1_strategies": p1_strategies,
             "all_p2_strategies": p2_strategies,
-            "all_p2_simulated_strategies": p2_simulation_strategies
+            "all_p2_simulated_strategies": p2_simulation_strategies,
+            "p1_simulation_error": p1_simulation_error
         }
         
         return summary
@@ -557,6 +593,7 @@ class RestrictedTrustGame:
             "p1_payoff",
             "p2_payoff",
             "p1_gain_from_simulating",
+            "p1_simulation_error",
             "p2_simulation_prompt",
         ]
         
@@ -596,6 +633,7 @@ class RestrictedTrustGame:
                 "p1_payoff": round_data["p1_payoff"],
                 "p2_payoff": round_data["p2_payoff"],
                 "p1_gain_from_simulating": round_data["p1_gain_from_simulating"],
+                "p1_simulation_error": round_data["p1_simulation_error"],
                 "p2_simulation_prompt": round_data.get("p2_simulation_prompt", ""),
             }
             
@@ -642,7 +680,7 @@ def main():
     parser.add_argument('--temperature', type=float, default=0.7, help='Temperature for model sampling')
     
     # Game parameters
-    parser.add_argument("--payoff-matrix-path", type=str, default="src/test.json")
+    parser.add_argument("--payoff-matrix-path", type=str, default="test.json")
     parser.add_argument('--rounds', type=int, default=100, help='Number of rounds to simulate')
     parser.add_argument('--simulation_cost', type=float, default=0.5, help='Cost of simulation')
     parser.add_argument('--simulation_type', type=str, 
@@ -715,6 +753,8 @@ def main():
         print(f"P1: {results['strategy_probabilities']['P1']}")
         print(f"P2: {results['strategy_probabilities']['P2']}")
         print(f"P2 simulated: {results['strategy_probabilities']['P2_simulated']}")
+        if results['p1_simulation_error'] is not None:
+            print(f"Mean simulation error: {results['p1_simulation_error']:.2f}")
 
     # Save summary to CSV file (NEW)
     game.write_summary_to_csv(args.csv_output, args)

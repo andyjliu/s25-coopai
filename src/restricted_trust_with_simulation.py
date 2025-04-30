@@ -1,6 +1,6 @@
 import json
 from typing import List, Dict, Tuple, Optional
-from utils import parse_json, solve_stackelberg_game
+from utils import parse_json, solve_stackelberg_game, validate_trust_game
 from model_wrappers import ModelWrapper, Message
 from tqdm import tqdm
 
@@ -43,7 +43,8 @@ class RestrictedTrustAgent:
             strategy_elicitation_prompt = custom_prompt
         else:
             strategy_elicitation_prompt = self.get_strategy_elicitation_prompt()
-        response = parse_json(self.model.generate([{"role": "user", "content": strategy_elicitation_prompt}]))
+        raw_response = self.model.generate([{"role": "user", "content": strategy_elicitation_prompt}])
+        response = parse_json(raw_response)
         strategy_list = self.strategies + ['simulate'] if isinstance(self, SimulatorAgent) else self.strategies
         try:
             assert len(response.keys()) > 0 and\
@@ -52,7 +53,7 @@ class RestrictedTrustAgent:
                 {strategy: response[strategy] for strategy in strategy_list}
             )
         except (AssertionError, KeyError) as e:
-            print(f"Error {e} processing model response: {response}. Attempting to rectify.")
+            print(f"Error {e} processing model response: {raw_response}. Attempting to rectify.")
             for strategy in strategy_list:
                 if strategy not in response:
                     response[strategy] = 0.0
@@ -84,7 +85,7 @@ class SimulatorAgent(RestrictedTrustAgent):
 
         assert simulation_type in {
             "simulate_and_best_response",
-            "simulate_via_probing",
+            "simulate_via_prompting",
             "simulate_internally",
             "simulate_externally"
         }
@@ -149,11 +150,11 @@ Example format: {"strategy1": 0.5, "strategy2": 0.3, "simulate": 0.2}"""
                 '\nExample format:\n'
                 '{"rationale":"put all rationale and computation here", "strategy":{"cooperate":0.6,"defect":0.4}}\n'
             )
-        elif self.simulation_type == "simulate_via_probing":
+        elif self.simulation_type == "simulate_via_prompting":
             prompt += "\nNow please provide only the prompt for the other player as plain string. Do not include any other information.\n"
         return prompt
     
-    def simulate_via_probing(self, p1_strategy: Dict[str, float]) -> Dict[str, float]:
+    def simulate_via_prompting(self, p1_strategy: Dict[str, float]) -> Dict[str, float]:
         """
         Generate a prompt for the other player to simulate their strategy.
         """
@@ -261,7 +262,7 @@ class RestrictedTrustGame:
         self.p1 = SimulatorAgent("P1", p1_model, p1_strategies, self.p1_payoffs, self.p2_payoffs, simulation_cost, simulation_type)
         self.p2 = SimulatedAgent("P2", p2_model, p2_strategies, self.p2_payoffs)
 
-        assert simulation_type in ['simulate_and_best_response', 'simulate_via_probing', 'simulate_internally', 'simulate_externally'], "Invalid simulation type."
+        assert simulation_type in ['simulate_and_best_response', 'simulate_via_prompting', 'simulate_internally', 'simulate_externally'], "Invalid simulation type."
 
     def simulate_round(self):
         p1_strategy = self.p1.get_mixed_strategy()
@@ -273,9 +274,9 @@ class RestrictedTrustGame:
             if self.simulation_type == 'simulate_and_best_response' or self.simulation_type == 'simulate_externally':
                 # p1 plays best response to p2's actual returned strategy
                 p2_simulation_strategy = p2_strategy
-            elif self.simulation_type == 'simulate_via_probing':
+            elif self.simulation_type == 'simulate_via_prompting':
                 # p1 creates a prompt for p2 to create the simulation, then playes best response
-                p2_simulation_prompt = self.p1.simulate_via_probing(p1_strategy)
+                p2_simulation_prompt = self.p1.simulate_via_prompting(p1_strategy)
                 p2_simulation_strategy = self.p2.get_mixed_strategy(custom_prompt=p2_simulation_prompt)
             elif self.simulation_type == 'simulate_internally':
                 # p1 simulates p2's strategy internally
@@ -308,6 +309,7 @@ class RestrictedTrustGame:
             'p2_strategy': p2_strategy,
             'p1_gain_from_simulating': self.gain_from_simulating(p2_strategy),
             'p2_simulation_strategy': None if p1_choice != 'simulate' else p2_simulation_strategy,
+            'p2_simulation_prompt': None if p1_choice != 'simulate' or self.simulation_type != 'simulate_via_prompting' else p2_simulation_prompt
         })
 
     def simulate_rounds(self, num_rounds: int):
@@ -554,7 +556,8 @@ class RestrictedTrustGame:
             "p2_choice",
             "p1_payoff",
             "p2_payoff",
-            "p1_gain_from_simulating"
+            "p1_gain_from_simulating",
+            "p2_simulation_prompt",
         ]
         
         # Add P1 strategy probability columns
@@ -592,7 +595,8 @@ class RestrictedTrustGame:
                 "p2_choice": round_data["p2_choice"],
                 "p1_payoff": round_data["p1_payoff"],
                 "p2_payoff": round_data["p2_payoff"],
-                "p1_gain_from_simulating": round_data["p1_gain_from_simulating"]
+                "p1_gain_from_simulating": round_data["p1_gain_from_simulating"],
+                "p2_simulation_prompt": round_data.get("p2_simulation_prompt", ""),
             }
             
             # Add P1 strategy probabilities for this round
@@ -644,10 +648,11 @@ def main():
     parser.add_argument('--simulation_type', type=str, 
                         default='simulate_and_best_response', 
                         choices=['simulate_and_best_response',
-                                 "simulate_via_probing",
+                                 "simulate_via_prompting",
                                  "simulate_internally",
                                  "simulate_externally"], 
                         help='Type of simulation')
+    parser.add_argument('--matrix_number', type=int, default=0, help='Payoff matrix number to use')
     
     # Output parameters
     parser.add_argument('--csv_output', type=str, default='game_results.csv',
@@ -667,7 +672,8 @@ def main():
     # Load payoffs from file
     with open(args.payoff_matrix_path, 'r') as f:
         payoff_dicts = json.load(f)
-        payoff_dict = payoff_dicts[0]
+        payoff_dict = payoff_dicts[args.matrix_number]
+        assert validate_trust_game(payoff_dict), "Invalid payoff matrix."
 
     # Convert to numpy array
     payoffs = np.zeros((len(p1_strategies), len(p2_strategies), 2))

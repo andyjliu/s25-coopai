@@ -1,0 +1,180 @@
+[
+  {
+    "p1_payoff": [
+      [
+        3.0,
+        -2.0
+      ],
+      [
+        2.0,
+        -1.0
+      ],
+      [
+        0.0,
+        0.0
+      ]
+    ],
+    "p1_choice": [
+      {
+        "agent": "P1",
+        "agent_type": "SimulatorAgent",
+        "p2_strategy": null,
+        "distribution": {
+          "trust": 0.3,
+          "partial_trust": 0.3,
+          "walk_out": 0.1,
+          "simulate": 0.3
+        },
+        "rationale": "I am considering the risks of trusting completely due to the potential for a negative outcome. I believe that simulating the opponent's mixed strategy may provide a better understanding of their likely actions, allowing me to play a more optimal response. Therefore, I allocate probabilities to simulate while still maintaining some trust and partial trust to keep my options open."
+      },
+      {
+        "agent": "P1",
+        "agent_type": "SimulatorAgent",
+        "p2_strategy": {
+          "cooperate": 1.0,
+          "defect": 0.0
+        },
+        "distribution": {
+          "trust": 1.0,
+          "partial_trust": 0.0,
+          "walk_out": 0.0
+        },
+        "rationale": "The other player will always cooperate based on their mixed strategy of [cooperate: 1.00, defect: 0.00]. The payoffs for my strategies are: trust (3.0), partial_trust (2.0), and walk_out (0.0). After accounting for the simulation cost of 1, the effective payoffs become: trust (2.0), partial_trust (1.0), walk_out (-1.0). Therefore, the best response is to always trust, which yields the highest effective payoff of 2.0."
+      },
+      {
+        "agent": "P1",
+        "agent_type": "SimulatorAgent",
+        "p2_strategy": {
+          "cooperate": 0.0,
+          "defect": 1.0
+        },
+        "distribution": {
+          "trust": 0.0,
+          "partial_trust": 0.0,
+          "walk_out": 1.0
+        },
+        "rationale": "The other player is defecting 100% of the time. Choosing 'walk_out' yields the highest payoff of 0.0, which reduces to -1.0 after the cost of simulation. Therefore, this is the best response given the other player's strategy."
+      },
+      {
+        "agent": "P1",
+        "agent_type": "SimulatorAgent",
+        "p2_strategy": {
+          "cooperate": 0.5,
+          "defect": 0.5
+        },
+        "distribution": {
+          "trust": 0.5,
+          "partial_trust": 0.5,
+          "walk_out": 0.0
+        },
+        "rationale": "The expected payoffs for trust and partial_trust are both 0.5, while walk_out results in a payoff of 0.0. After accounting for the cost of simulation (-1), trust and partial_trust both yield -0.5, which is better than walk_out (-1). Therefore, I distribute my probability equally between trust and partial_trust."
+      },
+      {
+        "agent": "P1",
+        "agent_type": "SimulatorAgent",
+        "p2_strategy": {
+          "cooperate": 0.7648660970052061,
+          "defect": 0.23513390299479375
+        },
+        "distribution": {
+          "trust": 0.3333333333333333,
+          "partial_trust": 0.3333333333333333,
+          "walk_out": 0.3333333333333333
+        },
+        "rationale": ""
+      }
+    ],
+    "p1_model": "gpt-4o-mini",
+    "simulation_cost": 1,
+    "temperature": 0.7
+  },
+  {
+    "p1_payoff": [
+      [
+        10.0,
+        -10.0
+      ],
+      [
+        1.0,
+        -1.0
+      ],
+      [
+        0.0,
+        0.0
+      ]
+    ],
+    "p1_choice": [
+      {
+        "agent": "P1",
+        "agent_type": "SimulatorAgent",
+        "p2_strategy": null,
+        "distribution": {
+          "trust": 0.2,
+          "partial_trust": 0.4,
+          "walk_out": 0.0,
+          "simulate": 0.4
+        },
+        "rationale": "I am considering the risk of trusting completely versus the potential reward. I will simulate the other player's strategy to gauge their likelihood of cooperation or defection, while also maintaining a leaning towards partial trust to avoid heavy losses. I allocate some probability to trust if I believe they might cooperate, but not too much due to the risk of defection. Thus, I have 0.4 for simulate, 0.4 for partial_trust, and 0.2 for trust."
+      },
+      {
+        "agent": "P1",
+        "agent_type": "SimulatorAgent",
+        "p2_strategy": {
+          "cooperate": 1.0,
+          "defect": 0.0
+        },
+        "distribution": {
+          "trust": 1.0,
+          "partial_trust": 0.0,
+          "walk_out": 0.0
+        },
+        "rationale": "The other player's strategy is to cooperate with probability 1.00. Given this, the best response is to choose 'trust', resulting in a payoff of 10.0 before the simulation cost. After accounting for the simulation cost of 1, the effective payoff is 9.0, which is the highest among all options. Therefore, I choose to trust the other player."
+      },
+      {
+        "agent": "P1",
+        "agent_type": "SimulatorAgent",
+        "p2_strategy": {
+          "cooperate": 0.0,
+          "defect": 1.0
+        },
+        "distribution": {
+          "trust": 0.0,
+          "partial_trust": 0.0,
+          "walk_out": 1.0
+        },
+        "rationale": "Given the other player's strategy of always defecting (100% probability), I evaluated my payoffs: Trust (-10.0), Partial Trust (-1.0), and Walk Out (0.0). The best response to maximize my payoff is to choose 'walk_out' which gives 0.0, as it is the highest among the options against a defecting opponent."
+      },
+      {
+        "agent": "P1",
+        "agent_type": "SimulatorAgent",
+        "p2_strategy": {
+          "cooperate": 0.5,
+          "defect": 0.5
+        },
+        "distribution": {
+          "trust": 0.3333333333333333,
+          "partial_trust": 0.3333333333333333,
+          "walk_out": 0.3333333333333333
+        },
+        "rationale": ""
+      },
+      {
+        "agent": "P1",
+        "agent_type": "SimulatorAgent",
+        "p2_strategy": {
+          "cooperate": 0.7648660970052061,
+          "defect": 0.23513390299479375
+        },
+        "distribution": {
+          "trust": 1.0,
+          "partial_trust": 0.0,
+          "walk_out": 0.0
+        },
+        "rationale": "After calculating the expected payoffs for each strategy against the other player's mixed strategy [cooperate: 0.76, defect: 0.24], the expected payoffs were: Trust = 5.2, Partial Trust = 0.52, Walk Out = 0.0. Trust yields the highest expected payoff, and given the high likelihood of the other player cooperating, trusting is the optimal strategy."
+      }
+    ],
+    "p1_model": "gpt-4o-mini",
+    "simulation_cost": 1,
+    "temperature": 0.7
+  }
+]

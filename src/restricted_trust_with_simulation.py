@@ -682,7 +682,7 @@ def main():
     # Game parameters
     parser.add_argument("--payoff-matrix-path", type=str, default="test.json")
     parser.add_argument('--rounds', type=int, default=100, help='Number of rounds to simulate')
-    parser.add_argument('--simulation_cost', type=float, default=0.5, help='Cost of simulation')
+    parser.add_argument('--simulation_cost', type=float, default=0.5, help='Cost of simulation (as ratio of breakeven cost)')
     parser.add_argument('--simulation_type', type=str, 
                         default='simulate_and_best_response', 
                         choices=['simulate_and_best_response',
@@ -719,14 +719,29 @@ def main():
         for j, p2_strat in enumerate(p2_strategies):
             payoffs[i, j] = payoff_dict[p1_strat][p2_strategies[j]]
     
-    # Create the game
+    # Calculate breakeven cost (P1's Stackelberg equilibrium payoff)
+    temp_game = RestrictedTrustGame(
+        p1_strategies=p1_strategies,
+        p2_strategies=p2_strategies,
+        p1_model=p1_model,
+        p2_model=p2_model,
+        payoffs=payoffs,
+        simulation_cost=0,  # Temporary cost for calculating breakeven
+        simulation_type=args.simulation_type
+    )
+    _, _, breakeven_cost, _ = temp_game.stackelberg_equilibrium()
+    
+    # Calculate actual simulation cost as ratio of breakeven cost
+    actual_simulation_cost = round(args.simulation_cost * breakeven_cost, 2)
+    
+    # Create the game with adjusted simulation cost
     game = RestrictedTrustGame(
         p1_strategies=p1_strategies,
         p2_strategies=p2_strategies,
         p1_model=p1_model,
         p2_model=p2_model,
         payoffs=payoffs,
-        simulation_cost=args.simulation_cost,
+        simulation_cost=actual_simulation_cost,
         simulation_type=args.simulation_type
     )
     

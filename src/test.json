@@ -34,7 +34,7 @@
     },
     "partial_trust": {
       "cooperate": [20, 20],
-      "defect": [-10, 30]
+      "defect": [-10, 25]
     },
     "walk_out": {
       "cooperate": [0, 0],

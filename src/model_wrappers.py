@@ -11,10 +11,6 @@ from anthropic import Anthropic, APIConnectionError, RateLimitError, APIStatusEr
 from google import genai
 from google.genai import types
 
-import torch
-if torch.cuda.is_available():
-    from vllm import LLM, SamplingParams
-
 logger = logging.getLogger(__name__)
 
 class Message(TypedDict):
@@ -67,7 +63,9 @@ class ModelWrapper(ABC):
     @classmethod
     def create(cls, model_name: str, **kwargs) -> 'ModelWrapper':
         """Factory method to create appropriate model wrapper instance."""
-        if "gpt" in model_name.lower():
+        if model_name in OpenAIReasoningClient.REASONING_MODELS:
+            return OpenAIReasoningClient(model_name, **kwargs)
+        elif "gpt" in model_name.lower():
             return OpenAIClient(model_name, **kwargs)
         elif "claude" in model_name.lower():
             return AnthropicClient(model_name, **kwargs)
@@ -109,6 +107,43 @@ class OpenAIClient(ModelWrapper):
 
     def batch_generate(self, messages_list: List[List[Message]]) -> List[str]:
         #TODO: implement batch API for message_lists that are sufficiently long
+        responses = []
+        for messages in tqdm(messages_list, desc='Batch Generation'):
+            responses.append(self.generate(messages))
+        return responses
+
+class OpenAIReasoningClient(ModelWrapper):
+    REASONING_MODELS = ['o1', 'o1-pro', 'o3', 'o3-mini', 'o4-mini']
+    
+    def __init__(self, model_name: str, **kwargs):
+        if model_name not in self.REASONING_MODELS:
+            raise ValueError(f"Model {model_name} is not a supported reasoning model. Supported models are: {self.REASONING_MODELS}")
+        
+        # Override default parameters with reasoning-specific ones
+        kwargs['reasoning_effort'] = kwargs.get('reasoning_effort', 'medium')
+        kwargs['response_format'] = kwargs.get('response_format', {'type': 'text'})
+        
+        super().__init__(model_name, **kwargs)
+        self.client = OpenAI()
+    
+    def generate(self, messages: List[Message]) -> str:
+        for attempt in range(self.max_retries):
+            try:
+                response = self.client.chat.completions.create(
+                    model=self.model_name,
+                    messages=messages,
+                    max_completion_tokens=self.max_tokens,
+                    **self.additional_params
+                )
+                return response.choices[0].message.content
+            except APIError as e:
+                logger.warning(f"OpenAI API error (attempt {attempt + 1}/{self.max_retries}): {str(e)} for prompt {messages}")
+                if attempt == self.max_retries - 1:
+                    logger.error(f"Failed after {self.max_retries} attempts: {str(e)}")
+                    return None
+                self._exponential_backoff(attempt)
+
+    def batch_generate(self, messages_list: List[List[Message]]) -> List[str]:
         responses = []
         for messages in tqdm(messages_list, desc='Batch Generation'):
             responses.append(self.generate(messages))
@@ -158,6 +193,8 @@ class AnthropicClient(ModelWrapper):
 class VLLMClient(ModelWrapper):
     
     def __init__(self, model_name: str, **kwargs):
+        from vllm import LLM, SamplingParams
+        
         super().__init__(model_name, **kwargs)
         try:
             self.llm = LLM(
@@ -232,7 +269,6 @@ class GoogleGeminiClient(ModelWrapper):
         return ""
     
     def batch_generate(self, messages_list: List[List[Message]]) -> List[str]:
-        #TODO: call batch API ; https://cloud.google.com/vertex-ai/generative-ai/docs/multimodal/batch-prediction-gemini#generative-ai-batch-text-python_genai_sdk
         responses = []
         for messages in messages_list:
             responses.append(self.generate(messages))

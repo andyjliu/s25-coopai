@@ -11,6 +11,8 @@ from anthropic import Anthropic, APIConnectionError, RateLimitError, APIStatusEr
 from google import genai
 from google.genai import types
 
+import pdb
+
 logger = logging.getLogger(__name__)
 
 class Message(TypedDict):
@@ -124,6 +126,7 @@ class OpenAIReasoningClient(ModelWrapper):
         kwargs['response_format'] = kwargs.get('response_format', {'type': 'text'})
         
         super().__init__(model_name, **kwargs)
+        self.max_tokens = 32768
         self.client = OpenAI()
     
     def generate(self, messages: List[Message]) -> str:

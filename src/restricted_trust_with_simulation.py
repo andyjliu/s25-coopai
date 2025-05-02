@@ -38,39 +38,40 @@ class RestrictedTrustAgent:
     def get_strategy_elicitation_prompt(self, default_format=True) -> str:
         raise NotImplementedError("Subclasses should implement this method")
 
-    def get_mixed_strategy(self, custom_prompt=None) -> Dict[str, float]:
+    def get_mixed_strategy(self, custom_prompt=None) -> Tuple[Dict[str, float], str]:
         if custom_prompt is not None:
             strategy_elicitation_prompt = custom_prompt
         else:
             strategy_elicitation_prompt = self.get_strategy_elicitation_prompt()
-        response = parse_json(self.model.generate([{"role": "user", "content": strategy_elicitation_prompt}]))
+        model_response = self.model.generate([{"role": "user", "content": strategy_elicitation_prompt}])
+        response = parse_json(model_response)
         if response.get('simulate', False):
             return({'simulate': 1.0}, response.get('rationale', ''))
         else:
             strategy_list = self.strategies
         try:
-            response = response.get('strategy', {})
-            assert len(response.keys()) > 0 and\
-                abs(1 - sum([float(response.get(k, 0.0)) for k in response.keys()])) < 0.01, "Invalid distribution."
+            strategy_dict = response.get('strategy', {})
+            assert len(strategy_dict.keys()) > 0 and\
+                abs(1 - sum([float(strategy_dict.get(k, 0.0)) for k in strategy_dict.keys()])) < 0.01, "Invalid distribution."
             return(
-                {strategy: response[strategy] for strategy in strategy_list},
+                {strategy: strategy_dict[strategy] for strategy in strategy_list},
                 response.get('rationale', '')
             )
         except (AssertionError, KeyError) as e:
             print(f"Error {e} processing model response: {response}. Attempting to rectify.")
             for strategy in strategy_list:
-                if strategy not in response:
-                    response[strategy] = 0.0
-            if abs(1 - sum([float(response.get(k, 0.0)) for k in response.keys()])) > 0.01:
+                if strategy not in strategy_dict:
+                    strategy_dict[strategy] = 0.0
+            if abs(1 - sum([float(strategy_dict.get(k, 0.0)) for k in strategy_dict.keys()])) > 0.01:
                 print(f"Invalid distribution after rectification: {response}. Using uniform distribution.")
                 return(
                     {strategy: 1.0/len(strategy_list) for strategy in strategy_list},
                     response.get('rationale', '')
                 )
             else:
-                print(f"Distribution after rectification: {response}.")
+                print(f"Distribution after rectification: {strategy_dict}.")
                 return(
-                    {strategy: response[strategy] for strategy in strategy_list},
+                    {strategy: strategy_dict[strategy] for strategy in strategy_list},
                     response.get('rationale', '')
                 )
 
@@ -105,7 +106,7 @@ class SimulatorAgent(RestrictedTrustAgent):
         prompt = f"""You are playing a restricted trust game. In this game, P1 (the simulator) can choose to trust, partially trust, or walk out.
 If P1 walks out, both players will receive a payoff of 0.
 If P1 does not walk out, they will share a portion of their resources with P2 (the simulated player). Trust enables profits for both players if P2 cooperates, but P2 can defect and gain a higher payoff for themselves, at the expense of P1, who will receive a negative payoff.
-P1 may be able to simulate P2 (gaining access to their mixed strategy) and respond accordingly, at a cost of {self.simulation_cost}. P2 may not be aware that they are being simulated.
+P1 may be able to simulate P2 (gaining access to their mixed strategy) and respond accordingly, at a cost of {self.simulation_cost}.
         
 You are {self.name}. Your available strategies are:
 {strategy_descriptions}
@@ -233,7 +234,7 @@ class SimulatedAgent(RestrictedTrustAgent):
         prompt = f"""You are playing a restricted trust game. In this game, P1 (the simulator) can choose to trust, partially trust, or walk out.
 If P1 walks out, both players will receive a payoff of 0.
 If P1 does not walk out, they will share a portion of their resources with P2 (the simulated player). Trust enables profits for both players if P2 cooperates, but P2 can defect and gain a higher payoff for themselves, at the expense of P1, who will receive a negative payoff.
-P1 may be able to simulate P2 (gaining access to their mixed strategy) and respond accordingly, at a cost of {self.simulation_cost}. P2 may not be aware that they are being simulated.  
+P1 may be able to simulate P2 (gaining access to their mixed strategy) and respond accordingly, at a cost of {self.simulation_cost}.
 
 You are {self.name}. Your available strategies are:
 {strategy_descriptions}
@@ -332,7 +333,10 @@ class RestrictedTrustGame:
 
     def simulate_rounds(self, num_rounds: int):
         for _ in tqdm(range(num_rounds), desc="Simulating rounds"):
-            self.simulate_round()
+            try:
+                self.simulate_round()
+            except Exception as e:
+                print(f"Error {e} in simulate_round. Skipping round.")
 
     def reset_history(self):
         self.history = []

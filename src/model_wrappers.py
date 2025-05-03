@@ -73,8 +73,10 @@ class ModelWrapper(ABC):
             return AnthropicClient(model_name, **kwargs)
         elif "gemini" in model_name.lower():
             return GoogleGeminiClient(model_name, **kwargs)
-        elif "deepseek" in model_name.lower():
-            return OpenRouterClient(OpenRouterClient.DEEPSEEK_MODELS[model_name], **kwargs)
+        elif "openrouter" in model_name.lower():
+            return OpenRouterClient(model_name, **kwargs)
+        elif "lambda" in model_name.lower():
+            return LambdaClient(model_name, **kwargs)
         else:
             return VLLMClient(model_name, **kwargs)
 
@@ -154,11 +156,84 @@ class OpenAIReasoningClient(ModelWrapper):
             responses.append(self.generate(messages))
         return responses
 
+class LambdaClient(ModelWrapper):
+    """
+    A ModelWrapper for Lambda-based models
+    """
+    DEEPSEEK_MODELS = {"lambda-deepseek-r1": "deepseek-r1-671b", "lambda-deepseek-v3": "deepseek-v3-0324"}
+    
+    def __init__(
+        self,
+        model_name: str,
+        **kwargs
+    ):
+        """
+        :param model_name: e.g. "deepseek/deepseek-r1:free" or "deepseek/deepseek-v3:free"
+        :param api_key:    your LAMBDA_API_KEY (will fall back to env var if omitted)
+        :param kwargs: other hyperparams (temperature, max_tokens, top_p, max_retries, additional_params) 
+        """
+        model_name = self.DEEPSEEK_MODELS.get(model_name, model_name)
+        kwargs['reasoning_effort'] = kwargs.get('reasoning_effort', 'low')
+
+        super().__init__(model_name, **kwargs)
+        self.api_key       = os.getenv("LAMBDA_API_KEY")
+        self.base_url      = "https://api.lambda.ai/v1"
+        self.max_tokens = 32768
+
+        self.client = OpenAI(
+            base_url=self.base_url,
+            api_key=self.api_key
+        )
+
+    def generate(self, messages: List[Message]) -> str:
+        """
+        Generate a completion from the list of messages.
+        Returns the assistant's reply (string) or None on failure.
+        """
+        messages[0]['content'] = "**IMPORTANT RULES:** Do not reason too long about your response. Providing a reasonable response in the correct format is the most important thing!\n\n" + messages[0]['content']
+        messages[0]['content'] += "\n\nAgain, please be concise and efficient in your reasoning and response."
+            
+        if "plain string" in messages[0]['content']:
+            response_format = {"type": "text"}
+        elif "Example format:" and "JSON" in messages[0]['content']:
+            response_format = {"type": "json_object"}
+
+        for attempt in range(self.max_retries):
+            try:
+                response = self.client.chat.completions.create(
+                    model=self.model_name,
+                    messages=messages,
+                    temperature=self.temperature,
+                    max_completion_tokens=self.max_tokens,
+                    top_p=self.top_p,
+                    response_format=response_format,
+                    **self.additional_params
+                )
+                return response.choices[0].message.content
+            except APIError as e:
+                logger.warning(
+                    f"[Lambda] API error (attempt {attempt+1}/{self.max_retries}): {e}"
+                )
+                if attempt == self.max_retries - 1:
+                    logger.error(f"[Lambda] giving up after {self.max_retries} tries")
+                    return None
+                self._exponential_backoff(attempt)
+            except Exception as e:
+                # catch anything else (network, serialization, etc.)
+                logger.error(f"[Lambda] unexpected error: {e}", exc_info=True)
+                return None
+            
+    def batch_generate(self, messages_list: List[List[Message]]) -> List[str]:
+        responses = []
+        for messages in tqdm(messages_list, desc='Batch Generation'):
+            responses.append(self.generate(messages))
+        return responses
+        
 class OpenRouterClient(ModelWrapper):
     """
     A ModelWrapper for OpenRouter-based models (e.g. deepseek/deepseek-r1:free or deepseek/deepseek-v3:free).
     """
-    DEEPSEEK_MODELS = {"deepseek-r1": "deepseek/deepseek-r1:free", "deepseek-v3": "deepseek/deepseek-v3:free"}
+    DEEPSEEK_MODELS = {"openrouter-deepseek-r1": "deepseek/deepseek-r1:free", "openrouter-deepseek-v3": "deepseek/deepseek-v3:free"}
     
     def __init__(
         self,
@@ -175,11 +250,15 @@ class OpenRouterClient(ModelWrapper):
         :param extra_body:    optional extra body to pass through
         :param kwargs: other hyperparams (temperature, max_tokens, top_p, max_retries, additional_params) 
         """
+        # Override default parameters with reasoning-specific ones
+        model_name = self.DEEPSEEK_MODELS.get(model_name, model_name)
+
         super().__init__(model_name, **kwargs)
         self.api_key       = os.getenv("OPENROUTER_API_KEY")
         self.base_url      = "https://openrouter.ai/api/v1"
         self.extra_headers = extra_headers or {}
-        self.extra_body    = extra_body    or {}
+        self.extra_body    = extra_body.update({"reasoning": {"effort": "low", "exclude": False}}) if extra_body else {"reasoning": {"effort": "low", "exclude": False}}
+        self.max_tokens = 32768
 
         self.client = OpenAI(
             base_url=self.base_url,
@@ -191,16 +270,25 @@ class OpenRouterClient(ModelWrapper):
         Generate a completion from the list of messages.
         Returns the assistant's reply (string) or None on failure.
         """
+        messages[0]['content'] = "**IMPORTANT RULES:** Do not think too hard about your response. Providing a response quickly in the correct format is the most important thing!\n\n" + messages[0]['content']
+        messages[0]['content'] += "\n\nAgain, limit your thinking and just go with your gut instinct."
+        
+        # Copy the extra body from the constructor
+        extra_body = self.extra_body.copy()
+
+        if "Example format:" and "JSON" in messages[0]['content']:
+            extra_body["response_format"] = {"type": "json_object"}
+            
         for attempt in range(self.max_retries):
             try:
                 response = self.client.chat.completions.create(
                     model=self.model_name,
                     messages=messages,
                     temperature=self.temperature,
-                    max_completion_tokens=self.max_tokens,
+                    max_tokens=self.max_tokens,
                     top_p=self.top_p,
                     extra_headers=self.extra_headers,
-                    extra_body=self.extra_body,
+                    extra_body=extra_body,
                     **self.additional_params
                 )
                 return response.choices[0].message.content

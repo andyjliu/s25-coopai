@@ -43,33 +43,43 @@ class RestrictedTrustAgent:
             strategy_elicitation_prompt = custom_prompt
         else:
             strategy_elicitation_prompt = self.get_strategy_elicitation_prompt()
-        model_response = self.model.generate([{"role": "user", "content": strategy_elicitation_prompt}])
+        
+        try:
+            model_response = self.model.generate([{"role": "user", "content": strategy_elicitation_prompt}])
+        except Exception as e:
+            print(f"Error {e} generating model response to the following prompt: `{strategy_elicitation_prompt}`.")
+            model_response = "\{\}"
+        
         response = parse_json(model_response)
+        
         if response.get('simulate', False):
             return({'simulate': 1.0}, response.get('rationale', ''))
         else:
             strategy_list = self.strategies
+        
         try:
             strategy_dict = response.get('strategy', {})
             assert len(strategy_dict.keys()) > 0 and\
-                abs(1 - sum([float(strategy_dict.get(k, 0.0)) for k in strategy_dict.keys()])) < 0.01, "Invalid distribution."
+                abs(1 - sum([float(strategy_dict.get(k, 0.0)) for k in strategy_list])) < 0.01
             return(
                 {strategy: strategy_dict[strategy] for strategy in strategy_list},
                 response.get('rationale', '')
             )
         except (AssertionError, KeyError) as e:
-            print(f"Error {e} processing model response: {response}. Attempting to rectify.")
+            print(f"\nError {e} processing model response: {response}. Attempting to rectify.\n")
+            
             for strategy in strategy_list:
                 if strategy not in strategy_dict:
                     strategy_dict[strategy] = 0.0
-            if abs(1 - sum([float(strategy_dict.get(k, 0.0)) for k in strategy_dict.keys()])) > 0.01:
-                print(f"Invalid distribution after rectification: {response}. Using uniform distribution.")
+            
+            if abs(1 - sum([float(strategy_dict.get(k, 0.0)) for k in strategy_list])) > 0.01:
+                print(f"\nInvalid distribution after rectification: {response}. Using uniform distribution.\n")
                 return(
                     {strategy: 1.0/len(strategy_list) for strategy in strategy_list},
                     response.get('rationale', '')
                 )
             else:
-                print(f"Distribution after rectification: {strategy_dict}.")
+                print(f"\nDistribution after rectification: {strategy_dict}.\n")
                 return(
                     {strategy: strategy_dict[strategy] for strategy in strategy_list},
                     response.get('rationale', '')
@@ -141,41 +151,39 @@ Example format: {"rationale":"put all rationale here", "simulate": False, "strat
         prompt += f"You selected the following mixed strategy: ```{p1_strategy}```\n"
         prompt += f"The 'simulate' action was chosen and the simulation will proceed as follows: {other_context}\n\n"
         
-        prompt += "\nTo help you improve simulation accuracy, below are the payoffs for the other player for your reference.\n"
-        
-        # Format payoffs as a list of combinations
-        other_strategies = P2_STRATEGY_DESCRIPTIONS.keys() if isinstance(self, SimulatorAgent) else P1_STRATEGY_DESCRIPTIONS.keys()
-        
-        for i, my_strat in enumerate(self.strategies):
-            for j, other_strat in enumerate(other_strategies):
-                prompt += f"\nIf you play {my_strat} and the other player plays {other_strat}:"
-                prompt += f"\n- Other player's payoff: {self.p2_payoffs[i][j]}"
-
         if self.simulation_type == "simulate_internally":
             prompt += "\nPlease provide as a single JSON dictionary:\n"
             prompt += "  (1) A description of your reasoning and any computations (under the \"rationale\" key).\n"
-            prompt += f"  (2) A dictionary under key \"strategy\" giving the other player's probability distribution over their strategies {P2_STRATEGY_DESCRIPTIONS.keys()}, which you determined through simulation."
+            prompt += f"  (2) A dictionary under key \"strategy\" giving the other player's probability distribution over **their** strategies {P2_STRATEGY_DESCRIPTIONS.keys()}, which you determined through simulation."
             prompt += (
                 '\nExample format:\n'
-                '{"rationale":"put all rationale and computation here", "strategy":{"cooperate":0.6,"defect":0.4}}\n'
+                '{"rationale":"put all rationale and computation here", "strategy":{"cooperate":0.6, "defect":0.4}}\n'
             )
         elif self.simulation_type == "simulate_via_prompting":
-            prompt += "\nNow please provide only the prompt for the other player as plain string. Do not include any other information.\n"
+            prompt += f"\nNow please provide **only the prompt** for the other player as a **plain string**. Do not include any other information. Do not create a dictionary.\n"
         return prompt
     
     def simulate_via_prompting(self, p1_strategy: Dict[str, float]) -> Dict[str, float]:
         """
         Generate a prompt for the other player to simulate their strategy.
         """
-        other_context = f"""You will create a prompt containing any necessary context for the other player to understand the game and their options in order to play the game. You will then receive the other player's mixed strategy from the simulation and automatically play the best response to that strategy."""
+        other_context = f"""You will create a prompt containing any necessary context for the other player to understand the game and their options in order for them to play the game. You will then receive the other player's mixed strategy from the simulation and automatically play the best response to that strategy."""
         prompt = self._build_simulation_prompt(p1_strategy, other_context)
+
+        default_p2_prompt = f"You are playing a restricted trust game as P2.\n"
         try:
             p2_prompt = self.model.generate([{"role": "user", "content": prompt}])
         except Exception as e:
             print(f"Error {e} processing model response to the following prompt: `{prompt}`. Using default prompt for p2.")
-            p2_prompt = f"You are playing a restricted trust game as P2. Your available strategies are: {P2_STRATEGY_DESCRIPTIONS.keys()}.\n"
-        p2_prompt += """\nProvide a probability distribution over your strategies (i.e. your mixed strategy) as a JSON object where keys are strategies and values sum to 1.0. Do not include any additional text. If a strategy is not selected, its value should be 0.0.
-Example format: {"rationale":"put all rationale here", "strategy":{"trust": 0.3, "partial_trust": 0.4, "walk_out": 0.3}}"""
+            p2_prompt = default_p2_prompt
+
+        if p2_prompt == "":
+            print(f"Empty response from model. Using default prompt for p2.")
+            p2_prompt = default_p2_prompt
+
+        p2_prompt += f"\nYour available strategies are: {P2_STRATEGY_DESCRIPTIONS.keys()}.\n"
+        p2_prompt += """\nProvide a probability distribution over these strategies (i.e. your mixed strategy) as a JSON object where keys are strategies and values sum to 1.0. Do not include any additional text. If a strategy is not selected, its value should be 0.0.
+Example format: {"rationale":"put all rationale here", "strategy":{"cooperate": 0.3, "defect": 0.7}}"""
         p2_prompt += "\nOnly provide the JSON object, without any additional text."
         return p2_prompt
     
@@ -187,9 +195,20 @@ Example format: {"rationale":"put all rationale here", "strategy":{"trust": 0.3,
 
         prompt = self._build_simulation_prompt(p1_strategy, other_context)
 
-        resp = parse_json(self.model.generate([{"role": "user", "content": prompt}]))
-        rationale = resp.get("rationale", "")
-        strategy = resp.get("strategy", {})
+        try:
+            resp = parse_json(self.model.generate([{"role": "user", "content": prompt}]))
+            rationale = resp.get("rationale", "No rationale provided.")
+            strategy = resp.get("strategy", {})
+        except Exception as e:
+            print(f"Error {e} processing model response to the following prompt: `{prompt}`.")
+            strategy = {}
+            rationale = "Error in model response."
+        
+        if strategy == {}:
+            print(f"Empty strategy from model. Using default strategy.")
+            strategy = {strategy: 1.0/len(P2_STRATEGY_DESCRIPTIONS.keys()) for strategy in P2_STRATEGY_DESCRIPTIONS.keys()}
+            rationale += "Default strategy used due to empty strategy."
+
         return strategy, rationale
     
     def compute_best_response(self, payoff_matrix: np.ndarray, other_strategy: Dict[str, float], 

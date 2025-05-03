@@ -21,10 +21,11 @@
 #   --output "explicit_simulation_results_${MODEL}_${AGENT1}_${AGENT2}.csv" \
   # --simreasoning
 
-sim_types=("simulate_externally" "simulate_and_best_response" "simulate_internally" "simulate_via_probing")
-MODEL=gpt-4o-mini
+sim_types=("simulate_externally" "simulate_and_best_response" "simulate_internally" "simulate_via_prompting")
+MODEL=gpt-4.1-mini
 ROUNDS=20
 SIM_COST=1
+MATRIX=1
 
 cd ../
 for SIM_TYPE in "${sim_types[@]}"; do
@@ -35,6 +36,8 @@ for SIM_TYPE in "${sim_types[@]}"; do
     --rounds $ROUNDS \
     --simulation_cost $SIM_COST \
     --simulation_type $SIM_TYPE \
-    --csv_output "experiments/restricted_trust_results_models-${MODEL}_sim-type-${SIM_TYPE}_sim-cost-${SIM_COST}.csv" \
-    --verbose
+    --csv_output "experiments/matrix_${MATRIX}/restricted_trust_results_models-${MODEL}_sim-type-${SIM_TYPE}_sim-cost-${SIM_COST}.csv" \
+    --matrix_number $MATRIX \
+    --verbose \
+    --payoff-matrix-path "src/test.json"
 done

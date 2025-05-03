@@ -699,6 +699,8 @@ def main():
     parser.add_argument('--verbose', action='store_true', help='Print detailed output')
     
     args = parser.parse_args()
+
+    os.makedirs(os.path.dirname(args.csv_output), exist_ok=True)  # Ensure directory exists
     
     # Define game parameters
     p1_strategies = list(P1_STRATEGY_DESCRIPTIONS.keys())

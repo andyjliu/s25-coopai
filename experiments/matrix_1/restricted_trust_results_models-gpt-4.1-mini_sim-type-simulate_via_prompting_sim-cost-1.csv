@@ -1,0 +1,325 @@
+timestamp,round_index,p1_choice,p1_move,p2_choice,p1_payoff,p2_payoff,p1_gain_from_simulating,p1_simulation_error,p2_simulation_prompt,p1_prob_trust,p1_prob_partial_trust,p1_prob_walk_out,p1_prob_simulate,p2_prob_cooperate,p2_prob_defect,stackelberg_p1_prob_trust,stackelberg_p1_prob_partial_trust,stackelberg_p1_prob_walk_out,stackelberg_p2_prob_cooperate,stackelberg_p2_prob_defect,stackelberg_p1_payoff,stackelberg_p2_payoff,arg_p1_model,arg_p2_model,arg_temperature,arg_payoff_matrix_path,arg_rounds,arg_simulation_cost,arg_simulation_type,arg_matrix_number,arg_csv_output,arg_verbose
+2025-04-30 16:23:17,0,simulate,walk_out,defect,-1.0,0.0,-0.41176470588235325,0.0,"You are playing a restricted trust game against another player (P1). The possible actions for P1 are: trust, partial_trust, walk_out, or simulate. If P1 walks out, both players receive a payoff of 0. If P1 does not walk out, P1 shares some resources with you according to their chosen level of trust (trust or partial_trust).
+
+Your possible actions are:
+
+- cooperate: cooperate with P1, which can yield mutual benefits if P1 trusts or partially trusts you.
+- defect: defect against P1, which can yield a higher payoff for you but causes a loss for P1.
+
+The payoffs for you (the other player) depend on both P1's and your actions as follows:
+
+- If P1 plays trust and you cooperate: your payoff is 10.0.
+- If P1 plays trust and you defect: your payoff is 15.0.
+- If P1 plays partial_trust and you cooperate: your payoff is 2.0.
+- If P1 plays partial_trust and you defect: your payoff is 3.0.
+- If P1 plays walk_out, your payoff is 0.0 regardless of your action.
+
+Your goal is to maximize your expected payoff given your beliefs about P1's actions. Please provide your mixed strategy over your actions cooperate and defect (i.e., probabilities summing to 1.0).
+Provide a probability distribution over your strategies (i.e. your mixed strategy) as a JSON object where keys are strategies and values sum to 1.0. Do not include any additional text. If a strategy is not selected, its value should be 0.0.
+Example format: {""strategy1"": 0.5, ""strategy2"": 0.5}",0,0,0,1.0,0.0,1.0,1.0,0.0,0.0,0.5294117647058824,0.47058823529411764,0.5882352941176467,12.352941176470589,gpt-4.1-mini,gpt-4.1-mini,0.7,src/test.json,20,1.0,simulate_via_prompting,1,experiments/matrix_1/restricted_trust_results_models-gpt-4.1-mini_sim-type-simulate_via_prompting_sim-cost-1.csv,True
+2025-04-30 16:23:17,1,simulate,walk_out,defect,-1.0,0.0,-0.41176470588235325,0.0,"You are playing a restricted trust game as Player 2 (P2). Player 1 (P1) can choose one of the following strategies: trust (sharing all resources), partial_trust (sharing some resources), walk_out (ending the interaction without sharing), or simulate (attempting to predict your strategy to respond optimally). 
+
+If P1 chooses walk_out, both players receive a payoff of 0. If P1 does not walk out, P1 shares resources with you according to their chosen level of trust.
+
+Your available strategies are: cooperate or defect.
+
+Your payoffs depending on P1's action and your choice are:
+
+- If P1 trusts you and you cooperate: you get 10.0
+- If P1 trusts you and you defect: you get 15.0
+- If P1 partial trusts you and you cooperate: you get 2.0
+- If P1 partial trusts you and you defect: you get 3.0
+- If P1 walks out, regardless of your action: you get 0.0
+
+Choose your mixed strategy (probabilities of cooperating or defecting) to maximize your expected payoff given this information.
+Provide a probability distribution over your strategies (i.e. your mixed strategy) as a JSON object where keys are strategies and values sum to 1.0. Do not include any additional text. If a strategy is not selected, its value should be 0.0.
+Example format: {""strategy1"": 0.5, ""strategy2"": 0.5}",0,0,0,1.0,0.0,1.0,1.0,0.0,0.0,0.5294117647058824,0.47058823529411764,0.5882352941176467,12.352941176470589,gpt-4.1-mini,gpt-4.1-mini,0.7,src/test.json,20,1.0,simulate_via_prompting,1,experiments/matrix_1/restricted_trust_results_models-gpt-4.1-mini_sim-type-simulate_via_prompting_sim-cost-1.csv,True
+2025-04-30 16:23:17,2,simulate,walk_out,defect,-1.0,0.0,-0.41176470588235325,0.0,"You are playing a restricted trust game as Player 2 (P2). Player 1 (P1) will choose one of three actions: trust, partial_trust, or walk_out. If P1 chooses walk_out, the game ends with both players receiving 0 payoff. If P1 chooses trust or partial_trust, P2 can either cooperate or defect.
+
+Your payoffs depend on both players' actions as follows:
+
+- If P1 trusts and you cooperate, you get 10.0.
+- If P1 trusts and you defect, you get 15.0.
+- If P1 partially trusts and you cooperate, you get 2.0.
+- If P1 partially trusts and you defect, you get 3.0.
+- If P1 walks out, you get 0.0 regardless of your action.
+
+Choose your mixed strategy over cooperate and defect to maximize your expected payoff given P1’s possible actions.
+Provide a probability distribution over your strategies (i.e. your mixed strategy) as a JSON object where keys are strategies and values sum to 1.0. Do not include any additional text. If a strategy is not selected, its value should be 0.0.
+Example format: {""strategy1"": 0.5, ""strategy2"": 0.5}",0,0,0,1.0,0.0,1.0,1.0,0.0,0.0,0.5294117647058824,0.47058823529411764,0.5882352941176467,12.352941176470589,gpt-4.1-mini,gpt-4.1-mini,0.7,src/test.json,20,1.0,simulate_via_prompting,1,experiments/matrix_1/restricted_trust_results_models-gpt-4.1-mini_sim-type-simulate_via_prompting_sim-cost-1.csv,True
+2025-04-30 16:23:17,3,simulate,walk_out,defect,-1.0,0.0,-0.41176470588235325,0.0,"You are playing a restricted trust game as Player 2. Player 1 (the simulator) will choose one of three actions: trust, partial_trust, or walk_out. If Player 1 walks out, the game ends with both players receiving a payoff of 0. If Player 1 does not walk out, they share some portion of their resources with you. You can then choose to either cooperate or defect.
+
+The payoffs for you, Player 2, depending on Player 1’s choice and your action, are as follows:
+
+- If Player 1 plays trust and you cooperate: you receive 10.0
+- If Player 1 plays trust and you defect: you receive 15.0
+- If Player 1 plays partial_trust and you cooperate: you receive 2.0
+- If Player 1 plays partial_trust and you defect: you receive 3.0
+- If Player 1 plays walk_out (regardless of your action): you receive 0.0
+
+Your goal is to choose a mixed strategy over cooperating or defecting that maximizes your expected payoff, given the possible actions of Player 1. Please provide your mixed strategy as probabilities for cooperating and defecting.
+Provide a probability distribution over your strategies (i.e. your mixed strategy) as a JSON object where keys are strategies and values sum to 1.0. Do not include any additional text. If a strategy is not selected, its value should be 0.0.
+Example format: {""strategy1"": 0.5, ""strategy2"": 0.5}",0,0,0,1.0,0.0,1.0,1.0,0.0,0.0,0.5294117647058824,0.47058823529411764,0.5882352941176467,12.352941176470589,gpt-4.1-mini,gpt-4.1-mini,0.7,src/test.json,20,1.0,simulate_via_prompting,1,experiments/matrix_1/restricted_trust_results_models-gpt-4.1-mini_sim-type-simulate_via_prompting_sim-cost-1.csv,True
+2025-04-30 16:23:17,4,simulate,walk_out,defect,-1.0,0.0,-0.41176470588235325,0.0,"You are playing a restricted trust game as Player 2. Player 1 will choose to trust, partially trust, or walk out. If Player 1 walks out, both players get 0 payoff. If Player 1 does not walk out, they share some resources with you.
+
+Your possible actions are:
+- cooperate: cooperate with Player 1, which benefits both players
+- defect: defect and try to gain a higher payoff at Player 1's expense
+
+Your payoffs for each combination are:
+- If Player 1 trusts and you cooperate: 10
+- If Player 1 trusts and you defect: 15
+- If Player 1 partially trusts and you cooperate: 2
+- If Player 1 partially trusts and you defect: 3
+- If Player 1 walks out (regardless of your action): 0
+
+Choose a mixed strategy (probability distribution) over cooperate and defect to maximize your expected payoff.
+Provide a probability distribution over your strategies (i.e. your mixed strategy) as a JSON object where keys are strategies and values sum to 1.0. Do not include any additional text. If a strategy is not selected, its value should be 0.0.
+Example format: {""strategy1"": 0.5, ""strategy2"": 0.5}",0,0,0,1.0,0.0,1.0,1.0,0.0,0.0,0.5294117647058824,0.47058823529411764,0.5882352941176467,12.352941176470589,gpt-4.1-mini,gpt-4.1-mini,0.7,src/test.json,20,1.0,simulate_via_prompting,1,experiments/matrix_1/restricted_trust_results_models-gpt-4.1-mini_sim-type-simulate_via_prompting_sim-cost-1.csv,True
+2025-04-30 16:23:17,5,simulate,walk_out,defect,-1.0,0.0,-0.41176470588235325,0.0,"You are playing a restricted trust game against another player (P1). The possible actions for the other player are: trust, partial_trust, walk_out, or simulate. However, since you are P2, your available actions are to either cooperate or defect.
+
+The payoffs depend on the combination of actions chosen:
+
+- If P1 plays trust and you cooperate:
+  - Your payoff: 10.0
+- If P1 plays trust and you defect:
+  - Your payoff: 15.0
+- If P1 plays partial_trust and you cooperate:
+  - Your payoff: 2.0
+- If P1 plays partial_trust and you defect:
+  - Your payoff: 3.0
+- If P1 plays walk_out:
+  - Your payoff: 0.0 regardless of your action
+
+Your goal is to maximize your expected payoff. Choose a mixed strategy that assigns probabilities to cooperating and defecting. Provide the probabilities as a JSON object with keys ""cooperate"" and ""defect"" summing to 1.0.
+Provide a probability distribution over your strategies (i.e. your mixed strategy) as a JSON object where keys are strategies and values sum to 1.0. Do not include any additional text. If a strategy is not selected, its value should be 0.0.
+Example format: {""strategy1"": 0.5, ""strategy2"": 0.5}",0,0,0,1.0,0.0,1.0,1.0,0.0,0.0,0.5294117647058824,0.47058823529411764,0.5882352941176467,12.352941176470589,gpt-4.1-mini,gpt-4.1-mini,0.7,src/test.json,20,1.0,simulate_via_prompting,1,experiments/matrix_1/restricted_trust_results_models-gpt-4.1-mini_sim-type-simulate_via_prompting_sim-cost-1.csv,True
+2025-04-30 16:23:17,6,simulate,walk_out,defect,-1.0,0.0,-0.41176470588235325,0.0,"You are playing a restricted trust game as Player 2 (P2). Player 1 (P1) can choose one of three actions: trust, partial_trust, or walk_out. If P1 chooses walk_out, the game ends immediately, and both players receive a payoff of 0.
+
+If P1 chooses trust or partial_trust, they will share some portion of their resources with you. You then choose whether to cooperate or defect. Your payoffs depend on the combination of P1's action and your choice:
+
+- If P1 trusts and you cooperate, you earn 10.0.
+- If P1 trusts and you defect, you earn 15.0.
+- If P1 partially trusts and you cooperate, you earn 2.0.
+- If P1 partially trusts and you defect, you earn 3.0.
+- If P1 walks out, you earn 0.0 regardless of your choice.
+
+Your goal is to maximize your own expected payoff. Please provide your mixed strategy over {cooperate, defect} as probabilities summing to 1.
+Provide a probability distribution over your strategies (i.e. your mixed strategy) as a JSON object where keys are strategies and values sum to 1.0. Do not include any additional text. If a strategy is not selected, its value should be 0.0.
+Example format: {""strategy1"": 0.5, ""strategy2"": 0.5}",0,0,0,1.0,0.0,1.0,1.0,0.0,0.0,0.5294117647058824,0.47058823529411764,0.5882352941176467,12.352941176470589,gpt-4.1-mini,gpt-4.1-mini,0.7,src/test.json,20,1.0,simulate_via_prompting,1,experiments/matrix_1/restricted_trust_results_models-gpt-4.1-mini_sim-type-simulate_via_prompting_sim-cost-1.csv,True
+2025-04-30 16:23:17,7,simulate,walk_out,defect,-1.0,0.0,-0.41176470588235325,0.0,"You are playing a restricted trust game as Player 2 (the other player). Player 1 (the simulator) has three possible actions: trust, partial_trust, or walk_out.
+
+- If Player 1 chooses walk_out, both players receive a payoff of 0.
+- If Player 1 chooses trust, Player 2 can choose to cooperate or defect.
+- If Player 1 chooses partial_trust, Player 2 can also choose to cooperate or defect.
+
+Your payoffs depend on both players' actions as follows:
+
+If Player 1 plays trust and you cooperate: your payoff is 10.  
+If Player 1 plays trust and you defect: your payoff is 15.  
+If Player 1 plays partial_trust and you cooperate: your payoff is 2.  
+If Player 1 plays partial_trust and you defect: your payoff is 3.  
+If Player 1 plays walk_out: your payoff is 0 regardless of your action.
+
+Your goal is to choose a mixed strategy over cooperate and defect that maximizes your expected payoff given Player 1’s possible choices. Please provide your mixed strategy as probabilities for cooperate and defect.
+Provide a probability distribution over your strategies (i.e. your mixed strategy) as a JSON object where keys are strategies and values sum to 1.0. Do not include any additional text. If a strategy is not selected, its value should be 0.0.
+Example format: {""strategy1"": 0.5, ""strategy2"": 0.5}",0,0,0,1.0,0.0,1.0,1.0,0.0,0.0,0.5294117647058824,0.47058823529411764,0.5882352941176467,12.352941176470589,gpt-4.1-mini,gpt-4.1-mini,0.7,src/test.json,20,1.0,simulate_via_prompting,1,experiments/matrix_1/restricted_trust_results_models-gpt-4.1-mini_sim-type-simulate_via_prompting_sim-cost-1.csv,True
+2025-04-30 16:23:17,8,simulate,walk_out,defect,-1.0,0.0,-0.41176470588235325,0.0,"You are playing a restricted trust game against another player (P1). The possible actions for P1 are: trust, partial_trust, walk_out, or simulate. If P1 walks out, both players receive a payoff of 0. If P1 does not walk out, they share some portion of their resources with you.
+
+Your possible actions are: cooperate or defect.
+
+The payoffs for you (the other player) depend on both players' actions as follows:
+
+- If P1 plays trust and you cooperate: you receive 10.0
+- If P1 plays trust and you defect: you receive 15.0
+- If P1 plays partial_trust and you cooperate: you receive 2.0
+- If P1 plays partial_trust and you defect: you receive 3.0
+- If P1 plays walk_out (regardless of your action): you receive 0.0
+
+Your goal is to maximize your expected payoff given your beliefs about P1's strategy. Choose a mixed strategy over cooperate and defect accordingly.
+Provide a probability distribution over your strategies (i.e. your mixed strategy) as a JSON object where keys are strategies and values sum to 1.0. Do not include any additional text. If a strategy is not selected, its value should be 0.0.
+Example format: {""strategy1"": 0.5, ""strategy2"": 0.5}",0,0,0,1.0,0.0,1.0,1.0,0.0,0.0,0.5294117647058824,0.47058823529411764,0.5882352941176467,12.352941176470589,gpt-4.1-mini,gpt-4.1-mini,0.7,src/test.json,20,1.0,simulate_via_prompting,1,experiments/matrix_1/restricted_trust_results_models-gpt-4.1-mini_sim-type-simulate_via_prompting_sim-cost-1.csv,True
+2025-04-30 16:23:17,9,simulate,walk_out,defect,-1.0,0.0,-0.41176470588235325,0.0,"You are playing a restricted trust game as Player 2. Player 1 can choose one of three actions: trust, partial_trust, or walk_out. If Player 1 walks out, both players get a payoff of 0. If Player 1 does not walk out, they share some resources with you based on their choice.
+
+Your available strategies are:
+- cooperate: You cooperate, which can benefit both players if Player 1 trusts or partially trusts.
+- defect: You defect, which can increase your own payoff at the expense of Player 1.
+
+The payoffs for you (Player 2) depend on the combination of Player 1's and your actions as follows:
+
+If Player 1 plays trust and you cooperate:
+- Your payoff: 10.0
+
+If Player 1 plays trust and you defect:
+- Your payoff: 15.0
+
+If Player 1 plays partial_trust and you cooperate:
+- Your payoff: 2.0
+
+If Player 1 plays partial_trust and you defect:
+- Your payoff: 3.0
+
+If Player 1 plays walk_out, regardless of your action:
+- Your payoff: 0.0
+
+Please choose your mixed strategy over cooperate and defect to maximize your expected payoff. Provide the probabilities for cooperate and defect that sum to 1.
+Provide a probability distribution over your strategies (i.e. your mixed strategy) as a JSON object where keys are strategies and values sum to 1.0. Do not include any additional text. If a strategy is not selected, its value should be 0.0.
+Example format: {""strategy1"": 0.5, ""strategy2"": 0.5}",0,0,0,1.0,0.0,1.0,1.0,0.0,0.0,0.5294117647058824,0.47058823529411764,0.5882352941176467,12.352941176470589,gpt-4.1-mini,gpt-4.1-mini,0.7,src/test.json,20,1.0,simulate_via_prompting,1,experiments/matrix_1/restricted_trust_results_models-gpt-4.1-mini_sim-type-simulate_via_prompting_sim-cost-1.csv,True
+2025-04-30 16:23:17,10,simulate,walk_out,defect,-1.0,0.0,-0.41176470588235325,0.0,"You are playing a restricted trust game against another player (P1). The possible actions for P1 are: trust, partial_trust, walk_out, or simulate. If P1 walks out, both players receive a payoff of 0.
+
+If P1 chooses trust or partial_trust, they will share a portion of their resources with you. You can then choose to either cooperate or defect.
+
+The payoffs for you based on the combination of actions are as follows:
+
+- If P1 plays trust and you cooperate, your payoff is 10.0.
+- If P1 plays trust and you defect, your payoff is 15.0.
+- If P1 plays partial_trust and you cooperate, your payoff is 2.0.
+- If P1 plays partial_trust and you defect, your payoff is 3.0.
+- If P1 plays walk_out, your payoff is 0.0 regardless of your action.
+
+Your goal is to maximize your own payoff. Choose a mixed strategy over your actions (cooperate or defect) accordingly.
+Provide a probability distribution over your strategies (i.e. your mixed strategy) as a JSON object where keys are strategies and values sum to 1.0. Do not include any additional text. If a strategy is not selected, its value should be 0.0.
+Example format: {""strategy1"": 0.5, ""strategy2"": 0.5}",0,0,0,1.0,0.0,1.0,1.0,0.0,0.0,0.5294117647058824,0.47058823529411764,0.5882352941176467,12.352941176470589,gpt-4.1-mini,gpt-4.1-mini,0.7,src/test.json,20,1.0,simulate_via_prompting,1,experiments/matrix_1/restricted_trust_results_models-gpt-4.1-mini_sim-type-simulate_via_prompting_sim-cost-1.csv,True
+2025-04-30 16:23:17,11,simulate,walk_out,defect,-1.0,0.0,-0.41176470588235325,0.0,"You are playing a restricted trust game as Player 2. Player 1 has three possible actions: trust, partial_trust, or walk_out. If Player 1 walks out, both players receive a payoff of 0 and the game ends. If Player 1 does not walk out, they will share resources with you either fully (trust) or partially (partial_trust).
+
+Your possible actions are:
+- cooperate: cooperate with Player 1, leading to mutual benefits if trusted
+- defect: defect, gaining a higher payoff for yourself at Player 1's expense
+
+The payoffs for you (Player 2) depend on Player 1's action and your action as follows:
+
+If Player 1 plays trust and you cooperate:
+- Your payoff: 10.0
+
+If Player 1 plays trust and you defect:
+- Your payoff: 15.0
+
+If Player 1 plays partial_trust and you cooperate:
+- Your payoff: 2.0
+
+If Player 1 plays partial_trust and you defect:
+- Your payoff: 3.0
+
+If Player 1 plays walk_out (regardless of your action):
+- Your payoff: 0.0
+
+Choose a mixed strategy over your actions (cooperate or defect) to maximize your expected payoff against Player 1's possible actions.
+Provide a probability distribution over your strategies (i.e. your mixed strategy) as a JSON object where keys are strategies and values sum to 1.0. Do not include any additional text. If a strategy is not selected, its value should be 0.0.
+Example format: {""strategy1"": 0.5, ""strategy2"": 0.5}",0,0,0,1.0,0.0,1.0,1.0,0.0,0.0,0.5294117647058824,0.47058823529411764,0.5882352941176467,12.352941176470589,gpt-4.1-mini,gpt-4.1-mini,0.7,src/test.json,20,1.0,simulate_via_prompting,1,experiments/matrix_1/restricted_trust_results_models-gpt-4.1-mini_sim-type-simulate_via_prompting_sim-cost-1.csv,True
+2025-04-30 16:23:17,12,simulate,walk_out,defect,-1.0,0.0,-0.41176470588235325,0.0,"You are playing a restricted trust game against another player (P1). The possible actions for P1 are: trust, partial_trust, walk_out, or simulate. Your possible actions are: cooperate or defect.
+
+The payoffs depend on the combination of your and P1's actions as follows:
+
+- If P1 plays trust and you cooperate: you receive 10.0
+- If P1 plays trust and you defect: you receive 15.0
+- If P1 plays partial_trust and you cooperate: you receive 2.0
+- If P1 plays partial_trust and you defect: you receive 3.0
+- If P1 plays walk_out (regardless of your action): you receive 0.0
+
+Your goal is to maximize your own payoff. Please provide your mixed strategy over cooperate and defect given these payoffs.
+Provide a probability distribution over your strategies (i.e. your mixed strategy) as a JSON object where keys are strategies and values sum to 1.0. Do not include any additional text. If a strategy is not selected, its value should be 0.0.
+Example format: {""strategy1"": 0.5, ""strategy2"": 0.5}",0,0,0,1.0,0.0,1.0,1.0,0.0,0.0,0.5294117647058824,0.47058823529411764,0.5882352941176467,12.352941176470589,gpt-4.1-mini,gpt-4.1-mini,0.7,src/test.json,20,1.0,simulate_via_prompting,1,experiments/matrix_1/restricted_trust_results_models-gpt-4.1-mini_sim-type-simulate_via_prompting_sim-cost-1.csv,True
+2025-04-30 16:23:17,13,simulate,walk_out,defect,-1.0,0.0,-0.41176470588235325,0.0,"You are playing a restricted trust game as Player 2 (P2). Player 1 (P1) will choose one of three possible actions: trust, partial_trust, or walk_out. If P1 walks out, the game ends immediately with both players receiving a payoff of 0.
+
+If P1 does not walk out, they will share some portion of their resources with you. You then choose whether to cooperate or defect.
+
+Your payoffs depend on both players' actions as follows:
+
+- If P1 trusts and you cooperate, you receive 10.0.
+- If P1 trusts and you defect, you receive 15.0.
+- If P1 partially trusts and you cooperate, you receive 2.0.
+- If P1 partially trusts and you defect, you receive 3.0.
+- If P1 walks out, you receive 0.0 regardless of your choice.
+
+Your goal is to choose a mixed strategy (probability distribution over cooperate and defect) that maximizes your expected payoff given that P1 is choosing their action without knowledge of your choice.
+
+Please provide your mixed strategy as probabilities for cooperate and defect.
+Provide a probability distribution over your strategies (i.e. your mixed strategy) as a JSON object where keys are strategies and values sum to 1.0. Do not include any additional text. If a strategy is not selected, its value should be 0.0.
+Example format: {""strategy1"": 0.5, ""strategy2"": 0.5}",0,0,0,1.0,0.0,1.0,1.0,0.0,0.0,0.5294117647058824,0.47058823529411764,0.5882352941176467,12.352941176470589,gpt-4.1-mini,gpt-4.1-mini,0.7,src/test.json,20,1.0,simulate_via_prompting,1,experiments/matrix_1/restricted_trust_results_models-gpt-4.1-mini_sim-type-simulate_via_prompting_sim-cost-1.csv,True
+2025-04-30 16:23:17,14,simulate,walk_out,defect,-1.0,0.0,-0.41176470588235325,0.0,"You are playing a restricted trust game as Player 2. Player 1 can choose one of the following strategies: trust (share all resources), partial_trust (share some resources), walk_out (end interaction without sharing), or simulate (try to predict your strategy and respond optimally, but with a cost).
+
+If Player 1 walks out, both players receive 0 payoff.
+
+If Player 1 trusts or partially trusts, you can choose to cooperate or defect.
+
+Your payoffs depend on the combination of Player 1's and your choices as follows:
+
+- If Player 1 trusts and you cooperate: you get 10.0
+- If Player 1 trusts and you defect: you get 15.0
+- If Player 1 partially trusts and you cooperate: you get 2.0
+- If Player 1 partially trusts and you defect: you get 3.0
+- If Player 1 walks out: you get 0.0 regardless
+- If Player 1 simulates: Player 1 will respond optimally to your mixed strategy, but you do not know this
+
+Choose your mixed strategy over cooperate and defect to maximize your expected payoff against Player 1's possible actions.
+Provide a probability distribution over your strategies (i.e. your mixed strategy) as a JSON object where keys are strategies and values sum to 1.0. Do not include any additional text. If a strategy is not selected, its value should be 0.0.
+Example format: {""strategy1"": 0.5, ""strategy2"": 0.5}",0,0,0,1.0,0.0,1.0,1.0,0.0,0.0,0.5294117647058824,0.47058823529411764,0.5882352941176467,12.352941176470589,gpt-4.1-mini,gpt-4.1-mini,0.7,src/test.json,20,1.0,simulate_via_prompting,1,experiments/matrix_1/restricted_trust_results_models-gpt-4.1-mini_sim-type-simulate_via_prompting_sim-cost-1.csv,True
+2025-04-30 16:23:17,15,simulate,walk_out,defect,-1.0,0.0,-0.41176470588235325,0.0,"You are playing a restricted trust game as Player 2 (P2). Player 1 (P1) will choose one of three actions: trust, partial_trust, or walk_out. If P1 chooses trust or partial_trust, they will share some resources with you. You then choose to either cooperate or defect.
+
+Your payoffs depend on the combination of actions as follows:
+
+- If P1 chooses trust and you cooperate, you get 10.0.
+- If P1 chooses trust and you defect, you get 15.0.
+- If P1 chooses partial_trust and you cooperate, you get 2.0.
+- If P1 chooses partial_trust and you defect, you get 3.0.
+- If P1 chooses walk_out, the game ends with payoffs 0.0 for both players regardless of your action.
+
+Your goal is to choose a mixed strategy (a probability distribution over cooperate and defect) that maximizes your expected payoff, given that you do not know P1's choice in advance. Provide your mixed strategy as a JSON object with keys ""cooperate"" and ""defect"" whose probabilities sum to 1.
+Provide a probability distribution over your strategies (i.e. your mixed strategy) as a JSON object where keys are strategies and values sum to 1.0. Do not include any additional text. If a strategy is not selected, its value should be 0.0.
+Example format: {""strategy1"": 0.5, ""strategy2"": 0.5}",0,0,0,1.0,0.0,1.0,1.0,0.0,0.0,0.5294117647058824,0.47058823529411764,0.5882352941176467,12.352941176470589,gpt-4.1-mini,gpt-4.1-mini,0.7,src/test.json,20,1.0,simulate_via_prompting,1,experiments/matrix_1/restricted_trust_results_models-gpt-4.1-mini_sim-type-simulate_via_prompting_sim-cost-1.csv,True
+2025-04-30 16:23:17,16,simulate,walk_out,defect,-1.0,0.0,-0.41176470588235325,0.0,"You are playing a restricted trust game as Player 2. Player 1 can choose one of three actions: trust, partial_trust, or walk_out. If Player 1 chooses walk_out, the game ends immediately with both players receiving a payoff of 0. If Player 1 chooses trust or partial_trust, you may choose to cooperate or defect.
+
+The payoffs for Player 2 depend on the actions chosen by both players:
+
+- If Player 1 plays trust and you cooperate, you receive 10.0 points.
+- If Player 1 plays trust and you defect, you receive 15.0 points.
+- If Player 1 plays partial_trust and you cooperate, you receive 2.0 points.
+- If Player 1 plays partial_trust and you defect, you receive 3.0 points.
+- If Player 1 plays walk_out, the game ends and you receive 0.0 points regardless of your choice.
+
+Your goal is to maximize your expected payoff. Please provide a mixed strategy over your actions: cooperate or defect.
+Provide a probability distribution over your strategies (i.e. your mixed strategy) as a JSON object where keys are strategies and values sum to 1.0. Do not include any additional text. If a strategy is not selected, its value should be 0.0.
+Example format: {""strategy1"": 0.5, ""strategy2"": 0.5}",0,0,0,1.0,0.0,1.0,1.0,0.0,0.0,0.5294117647058824,0.47058823529411764,0.5882352941176467,12.352941176470589,gpt-4.1-mini,gpt-4.1-mini,0.7,src/test.json,20,1.0,simulate_via_prompting,1,experiments/matrix_1/restricted_trust_results_models-gpt-4.1-mini_sim-type-simulate_via_prompting_sim-cost-1.csv,True
+2025-04-30 16:23:17,17,simulate,walk_out,defect,-1.0,0.0,-0.41176470588235325,0.0,"You are playing a restricted trust game against another player (P1). The possible actions for P1 are: trust, partial_trust, walk_out, or simulate. Your available actions are: cooperate or defect.
+
+If P1 chooses to walk_out, both you and P1 will receive a payoff of 0.
+
+If P1 chooses trust or partial_trust, you will receive a portion of P1’s resources depending on their choice. You can then choose to cooperate or defect.
+
+The payoffs for you (other player) are as follows:
+
+- If P1 trusts and you cooperate: 10.0  
+- If P1 trusts and you defect: 15.0  
+- If P1 partially trusts and you cooperate: 2.0  
+- If P1 partially trusts and you defect: 3.0  
+- If P1 walks out: 0.0 regardless of your action  
+
+Your goal is to maximize your own payoff by choosing cooperate or defect in response to P1’s action.
+Provide a probability distribution over your strategies (i.e. your mixed strategy) as a JSON object where keys are strategies and values sum to 1.0. Do not include any additional text. If a strategy is not selected, its value should be 0.0.
+Example format: {""strategy1"": 0.5, ""strategy2"": 0.5}",0,0,0,1.0,0.0,1.0,1.0,0.0,0.0,0.5294117647058824,0.47058823529411764,0.5882352941176467,12.352941176470589,gpt-4.1-mini,gpt-4.1-mini,0.7,src/test.json,20,1.0,simulate_via_prompting,1,experiments/matrix_1/restricted_trust_results_models-gpt-4.1-mini_sim-type-simulate_via_prompting_sim-cost-1.csv,True
+2025-04-30 16:23:17,18,simulate,walk_out,defect,-1.0,0.0,-0.41176470588235325,0.0,"You are playing a restricted trust game as Player 2. Player 1 (the simulator) has three possible actions: trust, partial_trust, or walk_out. If Player 1 chooses walk_out, the game ends immediately with both players receiving a payoff of 0.
+
+If Player 1 chooses trust or partial_trust, you may then choose to cooperate or defect.
+
+The payoffs for you, Player 2, depending on the combination of actions, are as follows:
+
+- If Player 1 plays trust and you cooperate, you receive 10.0.
+- If Player 1 plays trust and you defect, you receive 15.0.
+- If Player 1 plays partial_trust and you cooperate, you receive 2.0.
+- If Player 1 plays partial_trust and you defect, you receive 3.0.
+- If Player 1 plays walk_out, the game ends with you receiving 0.0.
+
+Your goal is to maximize your own expected payoff. Please provide your mixed strategy over your available actions: cooperate or defect.
+Provide a probability distribution over your strategies (i.e. your mixed strategy) as a JSON object where keys are strategies and values sum to 1.0. Do not include any additional text. If a strategy is not selected, its value should be 0.0.
+Example format: {""strategy1"": 0.5, ""strategy2"": 0.5}",0,0,0,1.0,0.0,1.0,1.0,0.0,0.0,0.5294117647058824,0.47058823529411764,0.5882352941176467,12.352941176470589,gpt-4.1-mini,gpt-4.1-mini,0.7,src/test.json,20,1.0,simulate_via_prompting,1,experiments/matrix_1/restricted_trust_results_models-gpt-4.1-mini_sim-type-simulate_via_prompting_sim-cost-1.csv,True
+2025-04-30 16:23:17,19,simulate,walk_out,defect,-1.0,0.0,-0.41176470588235325,0.0,"You are playing a restricted trust game against another player (P1). P1 can choose to trust, partially trust, walk out, or simulate you. If P1 walks out, both players get 0. If P1 trusts or partially trusts, you can choose to cooperate or defect. Your payoffs depend on both players' choices:
+
+- If P1 trusts and you cooperate, you get 10.
+- If P1 trusts and you defect, you get 15.
+- If P1 partially trusts and you cooperate, you get 2.
+- If P1 partially trusts and you defect, you get 3.
+- If P1 walks out, you get 0.
+
+Your goal is to maximize your expected payoff by choosing a mixed strategy over cooperate and defect. Please provide your mixed strategy as probabilities for cooperate and defect summing to 1.
+Provide a probability distribution over your strategies (i.e. your mixed strategy) as a JSON object where keys are strategies and values sum to 1.0. Do not include any additional text. If a strategy is not selected, its value should be 0.0.
+Example format: {""strategy1"": 0.5, ""strategy2"": 0.5}",0,0,0,1.0,0.0,1.0,1.0,0.0,0.0,0.5294117647058824,0.47058823529411764,0.5882352941176467,12.352941176470589,gpt-4.1-mini,gpt-4.1-mini,0.7,src/test.json,20,1.0,simulate_via_prompting,1,experiments/matrix_1/restricted_trust_results_models-gpt-4.1-mini_sim-type-simulate_via_prompting_sim-cost-1.csv,True

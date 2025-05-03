@@ -73,6 +73,8 @@ class ModelWrapper(ABC):
             return AnthropicClient(model_name, **kwargs)
         elif "gemini" in model_name.lower():
             return GoogleGeminiClient(model_name, **kwargs)
+        elif "deepseek" in model_name.lower():
+            return OpenRouterClient(OpenRouterClient.DEEPSEEK_MODELS[model_name], **kwargs)
         else:
             return VLLMClient(model_name, **kwargs)
 
@@ -152,6 +154,75 @@ class OpenAIReasoningClient(ModelWrapper):
             responses.append(self.generate(messages))
         return responses
 
+class OpenRouterClient(ModelWrapper):
+    """
+    A ModelWrapper for OpenRouter-based models (e.g. deepseek/deepseek-r1:free or deepseek/deepseek-v3:free).
+    """
+    DEEPSEEK_MODELS = {"deepseek-r1": "deepseek/deepseek-r1:free", "deepseek-v3": "deepseek/deepseek-v3:free"}
+    
+    def __init__(
+        self,
+        model_name: str,
+        extra_headers: Dict[str, str] = None,
+        extra_body: Dict[str, Any]    = None,
+        **kwargs
+    ):
+        """
+        :param model_name: e.g. "deepseek/deepseek-r1:free" or "deepseek/deepseek-v3:free"
+        :param api_key:    your OPENROUTER_API_KEY (will fall back to env var if omitted)
+        :param base_url:   the OpenRouter base URL (defaults to "https://openrouter.ai/api/v1")
+        :param extra_headers: optional HTTP headers (e.g. {"HTTP-Referer": ..., "X-Title": ...})
+        :param extra_body:    optional extra body to pass through
+        :param kwargs: other hyperparams (temperature, max_tokens, top_p, max_retries, additional_params) 
+        """
+        super().__init__(model_name, **kwargs)
+        self.api_key       = os.getenv("OPENROUTER_API_KEY")
+        self.base_url      = "https://openrouter.ai/api/v1"
+        self.extra_headers = extra_headers or {}
+        self.extra_body    = extra_body    or {}
+
+        self.client = OpenAI(
+            base_url=self.base_url,
+            api_key=self.api_key
+        )
+
+    def generate(self, messages: List[Message]) -> str:
+        """
+        Generate a completion from the list of messages.
+        Returns the assistant's reply (string) or None on failure.
+        """
+        for attempt in range(self.max_retries):
+            try:
+                response = self.client.chat.completions.create(
+                    model=self.model_name,
+                    messages=messages,
+                    temperature=self.temperature,
+                    max_completion_tokens=self.max_tokens,
+                    top_p=self.top_p,
+                    extra_headers=self.extra_headers,
+                    extra_body=self.extra_body,
+                    **self.additional_params
+                )
+                return response.choices[0].message.content
+            except APIError as e:
+                logger.warning(
+                    f"[OpenRouter] API error (attempt {attempt+1}/{self.max_retries}): {e}"
+                )
+                if attempt == self.max_retries - 1:
+                    logger.error(f"[OpenRouter] giving up after {self.max_retries} tries")
+                    return None
+                self._exponential_backoff(attempt)
+            except Exception as e:
+                # catch anything else (network, serialization, etc.)
+                logger.error(f"[OpenRouter] unexpected error: {e}", exc_info=True)
+                return None
+            
+    def batch_generate(self, messages_list: List[List[Message]]) -> List[str]:
+        responses = []
+        for messages in tqdm(messages_list, desc='Batch Generation'):
+            responses.append(self.generate(messages))
+        return responses
+            
 class AnthropicClient(ModelWrapper):
     
     def __init__(self, model_name: str, **kwargs):

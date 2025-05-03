@@ -682,7 +682,7 @@ def main():
     
     # Game parameters
     parser.add_argument("--payoff-matrix-path", type=str, default="test.json")
-    parser.add_argument('--rounds', type=int, default=100, help='Number of rounds to simulate')
+    parser.add_argument('--rounds', type=int, default=10, help='Number of rounds to simulate')
     parser.add_argument('--simulation_cost', type=float, default=0.5, help='Cost of simulation (as ratio of breakeven cost)')
     parser.add_argument('--simulation_type', type=str, 
                         default='simulate_and_best_response', 
@@ -694,7 +694,7 @@ def main():
     parser.add_argument('--matrix_number', type=int, default=0, help='Payoff matrix number to use')
     
     # Output parameters
-    parser.add_argument('--csv_output', type=str, default='game_results.csv',
+    parser.add_argument('--csv_output', type=str, default='./game_results.csv',
                         help='File to save game summary statistics as CSV')
     parser.add_argument('--verbose', action='store_true', help='Print detailed output')
     

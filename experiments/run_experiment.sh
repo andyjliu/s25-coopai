@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-sim_types=("simulate_externally" "simulate_and_best_response" "simulate_internally" "simulate_via_prompting")
+sim_types=("simulate_via_prompting" "simulate_and_best_response" "simulate_internally" "simulate_externally")
 sim_costs=(0.0 0.4 0.8 1.2 1.6)
-models=("deepseek-r1" "deepseek-v3")
+models=("lambda-deepseek-r1" "lambda-deepseek-v3")
 ROUNDS=20
 MATRIX=0
 

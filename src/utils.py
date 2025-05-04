@@ -3,6 +3,7 @@ import numpy as np
 import math
 from typing import Dict, List, Tuple, Any, Optional
 from scipy.optimize import linprog
+import pdb
 
 def parse_json(response):
     try:
@@ -11,6 +12,19 @@ def parse_json(response):
         return json.loads(response[left:right])
     except (ValueError, json.JSONDecodeError) as e:
         print(f'Error parsing JSON: {e}')
+        if isinstance(e, ValueError):
+            if '{' not in response:
+                response = '{' + response
+            if '}' not in response:
+                response = response + '}'
+            try:
+                left = response.index('{')
+                right = response.rindex('}') + 1
+                print(f'Attempting to parse JSON with added brackets: {response[left:right]}')
+                return json.loads(response[left:right])
+            except json.JSONDecodeError as e:
+                print(f'Error parsing JSON after adding brackets: {e}')
+
         return {}
 
 def gpus_needed(model_name: str) -> int:

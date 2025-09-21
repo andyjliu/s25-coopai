@@ -404,6 +404,7 @@ class GoogleGeminiClient(ModelWrapper):
         self.api_key = os.environ.get("GOOGLE_API_KEY")
         self.client = genai.Client(api_key=self.api_key)
         self.model_name = model_name
+        self.max_tokens = 32768
     
     def generate(self, messages: List[Message]) -> str:
         prompt = self._format_messages(messages)
@@ -423,8 +424,10 @@ class GoogleGeminiClient(ModelWrapper):
                 return response.text
             except Exception as e:
                 logger.warning(f"Gemini API error (attempt {attempt + 1}/{self.max_retries}): {str(e)} for prompt {messages}")
+                print(f"Gemini API error (attempt {attempt + 1}/{self.max_retries}): {str(e)} for prompt {messages}")
                 if attempt == self.max_retries - 1:
                     logger.error(f"Failed after {self.max_retries} attempts: {str(e)}")
+                    print(f"Failed after {self.max_retries} attempts: {str(e)}")
                     return None
                 self._exponential_backoff(attempt)
                 attempt += 1

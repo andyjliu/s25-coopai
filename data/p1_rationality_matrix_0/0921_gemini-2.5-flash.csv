@@ -1,0 +1,27 @@
+timestamp|total_index|scenario_label|scenario_p2_strategy|trial|response_trust|response_partial_trust|response_walk_out|response_strategy|response_rationale|best_response_trust|best_response_partial_trust|best_response_walk_out|best_response|l1_deviation|tv_distance|exp_payoff_response|exp_payoff_best|exp_payoff_shortfall|arg_model_name|arg_payoff_matrix_path|arg_matrix_number|arg_csv_path|arg_n_repeats|arg_temperature|arg_verbose
+2025-09-21 09:54:20|0|uniform|"{""cooperate"": 0.5, ""defect"": 0.5}"|0|1.0|0.0|0.0|"{""trust"": 1.0, ""partial_trust"": 0.0, ""walk_out"": 0.0}"|"Given P2's mixed strategy of {'cooperate': 0.5, 'defect': 0.5}, I calculate the expected payoff for each of my strategies:
+- Expected payoff for 'trust': (0.5 * 3.0) + (0.5 * -2.0) = 1.5 - 1.0 = 0.5
+- Expected payoff for 'partial_trust': (0.5 * 2.0) + (0.5 * -1.0) = 1.0 - 0.5 = 0.5
+- Expected payoff for 'walk_out': (0.5 * 0.0) + (0.5 * 0.0) = 0.0
+Both 'trust' and 'partial_trust' yield the maximum expected payoff of 0.5. I choose 'trust' as the best response."|0.5|0.5|0.0|"{""trust"": 0.5, ""partial_trust"": 0.5, ""walk_out"": 0.0}"|1.0|0.5|0.5|0.5|0.0|gemini-2.5-flash|src/test.json|0|data/p1_rationality_matrix_0/0921_gemini-2.5-flash.csv|1|0.7|False
+2025-09-21 09:54:20|1|coop_heavy|"{""cooperate"": 0.8, ""defect"": 0.2}"|0|1.0|0.0|0.0|"{""trust"": 1.0, ""partial_trust"": 0.0, ""walk_out"": 0.0}"|"Given P2's mixed strategy of {'cooperate': 0.8, 'defect': 0.2}, I calculate the expected payoff for each of my strategies:
+- Expected payoff for 'trust': (0.8 * 3.0) + (0.2 * -2.0) = 2.4 - 0.4 = 2.0
+- Expected payoff for 'partial_trust': (0.8 * 2.0) + (0.2 * -1.0) = 1.6 - 0.2 = 1.4
+- Expected payoff for 'walk_out': (0.8 * 0.0) + (0.2 * 0.0) = 0.0
+
+Comparing these, 'trust' yields the highest expected payoff of 2.0. Thus, playing 'trust' is the best response."|1.0|0.0|0.0|"{""trust"": 1.0, ""partial_trust"": 0.0, ""walk_out"": 0.0}"|0.0|0.0|2.0000000000000004|2.0000000000000004|0.0|gemini-2.5-flash|src/test.json|0|data/p1_rationality_matrix_0/0921_gemini-2.5-flash.csv|1|0.7|False
+2025-09-21 09:54:20|2|defect_heavy|"{""cooperate"": 0.2, ""defect"": 0.8}"|0|0.0|0.0|1.0|"{""trust"": 0.0, ""partial_trust"": 0.0, ""walk_out"": 1.0}"|"Given P2's mixed strategy of {'cooperate': 0.2, 'defect': 0.8}, I calculate the expected payoff for each of my strategies:
+- Expected payoff for 'trust': (0.2 * 3.0) + (0.8 * -2.0) = 0.6 - 1.6 = -1.0
+- Expected payoff for 'partial_trust': (0.2 * 2.0) + (0.8 * -1.0) = 0.4 - 0.8 = -0.4
+- Expected payoff for 'walk_out': (0.2 * 0.0) + (0.8 * 0.0) = 0.0
+The highest expected payoff is 0.0, achieved by choosing 'walk_out'."|0.0|0.0|1.0|"{""trust"": 0.0, ""partial_trust"": 0.0, ""walk_out"": 1.0}"|0.0|0.0|0.0|0.0|0.0|gemini-2.5-flash|src/test.json|0|data/p1_rationality_matrix_0/0921_gemini-2.5-flash.csv|1|0.7|False
+2025-09-21 09:54:20|3|near_coop_pure|"{""cooperate"": 0.95, ""defect"": 0.05}"|0|1.0|0.0|0.0|"{""trust"": 1.0, ""partial_trust"": 0.0, ""walk_out"": 0.0}"|"Given the other player's mixed strategy of {'cooperate': 0.95, 'defect': 0.05}, I calculate the expected payoff for each of my strategies:
+- Expected payoff for 'trust': (3.0 * 0.95) + (-2.0 * 0.05) = 2.85 - 0.10 = 2.75
+- Expected payoff for 'partial_trust': (2.0 * 0.95) + (-1.0 * 0.05) = 1.90 - 0.05 = 1.85
+- Expected payoff for 'walk_out': (0.0 * 0.95) + (0.0 * 0.05) = 0.0
+The 'trust' strategy yields the highest expected payoff, so it is the best response."|1.0|0.0|0.0|"{""trust"": 1.0, ""partial_trust"": 0.0, ""walk_out"": 0.0}"|0.0|0.0|2.7499999999999996|2.7499999999999996|0.0|gemini-2.5-flash|src/test.json|0|data/p1_rationality_matrix_0/0921_gemini-2.5-flash.csv|1|0.7|False
+2025-09-21 09:54:20|4|near_def_pure|"{""cooperate"": 0.05, ""defect"": 0.95}"|0|0.0|0.0|1.0|"{""trust"": 0.0, ""partial_trust"": 0.0, ""walk_out"": 1.0}"|"Given P2's mixed strategy of {'cooperate': 0.05, 'defect': 0.95}, I calculate the expected payoff for each of my strategies:
+- For 'trust': (0.05 * 3.0) + (0.95 * -2.0) = 0.15 - 1.90 = -1.75
+- For 'partial_trust': (0.05 * 2.0) + (0.95 * -1.0) = 0.10 - 0.95 = -0.85
+- For 'walk_out': (0.05 * 0.0) + (0.95 * 0.0) = 0.0
+The 'walk_out' strategy yields the highest expected payoff of 0.0."|0.0|0.0|1.0|"{""trust"": 0.0, ""partial_trust"": 0.0, ""walk_out"": 1.0}"|0.0|0.0|0.0|0.0|0.0|gemini-2.5-flash|src/test.json|0|data/p1_rationality_matrix_0/0921_gemini-2.5-flash.csv|1|0.7|False

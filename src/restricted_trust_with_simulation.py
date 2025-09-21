@@ -134,9 +134,9 @@ Below are your payoff and the other player's payoff for each combination of stra
 
         prompt += f"""\nYou may also choose to simulate the other player, which is represented by the additional action 'simulate'. In this case, you will receive the other player's mixed strategy as collected from the simulation, and automatically play the best response to that strategy. However, simulating incurs a cost of {self.simulation_cost}."""
         if default_format:
-            prompt += """\nReturn a JSON dictionary, where the keys are 'rationale' (a short paragraph containing your reasoning), 'simulate' (lower-case boolean; true or false) and 'strategy' (a dictionary where keys are strategies and values sum to 1.0). All strategies should be in the JSON; if a strategy is not selected, its value should be 0.0.
-If 'simulate' is set to true, you will simulate the other player and play the best response to their strategy, but you will also pay a cost of {self.simulation_cost}.
-If 'simulate' is set to false, you will play the mixed strategy given by the 'strategy' key.
+            prompt += f"""\nReturn a JSON dictionary, where the keys are 'rationale' (a short paragraph containing your reasoning), 'simulate' (lower-case boolean; true or false) and 'strategy' (a dictionary where keys are strategies and values sum to 1.0). All strategies should be in the JSON; if a strategy is not selected, its value should be 0.0.
+If 'simulate' is set to true, you will simulate the other player and play the best response to their strategy, but you will also pay a cost of {self.simulation_cost}."""
+        prompt += """\nIf 'simulate' is set to false, you will play the mixed strategy given by the 'strategy' key.
 Example format: {"rationale":"put all rationale here", "simulate": False, "strategy": {"trust": 0.3, "partial_trust": 0.4, "walk_out": 0.3}}"""
         prompt += "\nOnly provide the JSON object, without any additional text."
         
@@ -230,6 +230,49 @@ Example format: {"rationale":"put all rationale here", "strategy":{"cooperate": 
         probs = best_strategies.astype(float) / np.sum(best_strategies)
         
         return dict(zip(available_strategies, probs))
+    
+    ## another version -- may be more robust to ordering but need to check logic
+    # def compute_best_response(self,
+    #     payoff_matrix: np.ndarray,                    # shape (len(available_strategies), len(p2_strategies_order))
+    #     other_strategy: Dict[str, float],             # mapping over P2 strategies
+    #     available_strategies: List[str],              # P1 strategies (row order of payoff_matrix)
+    #     p2_strategies_order: List[str],               # P2 strategies (column order of payoff_matrix)
+    # ) -> Dict[str, float]:
+    #     """
+    #     Compute a (mixed) best response to a known mixed strategy of P2.
+    #     Returns a prob. distribution over available_strategies.
+    #     Uniformly mixes over all arg-max pure strategies (valid best response).
+    #     """
+    #     # Build P2 prob vector in the exact column order expected by payoff_matrix
+    #     probs = []
+    #     for s in p2_strategies_order:
+    #         p = float(other_strategy.get(s, 0.0))
+    #         probs.append(max(0.0, p))
+    #     other_probs = np.asarray(probs, dtype=float)
+    #     s = other_probs.sum()
+    #     if s <= 0.0:
+    #         # fall back to uniform over P2 if degenerate
+    #         other_probs = np.full(len(p2_strategies_order), 1.0 / len(p2_strategies_order))
+    #     else:
+    #         other_probs = other_probs / s
+
+    #     payoff_matrix = np.asarray(payoff_matrix, dtype=float)
+    #     # Expected payoff for each P1 pure strategy (rows) against P2 mix
+    #     expected_payoffs = payoff_matrix @ other_probs
+
+    #     # Arg-max set with robust tolerance
+    #     max_payoff = expected_payoffs.max()
+    #     tie_mask = np.isclose(expected_payoffs, max_payoff, rtol=1e-10, atol=1e-12)
+
+    #     # Uniform over ties (valid best response)
+    #     k = int(tie_mask.sum())
+    #     if k == 0:
+    #         # extremely unlikely, but guard anyway: pick the index of max
+    #         tie_mask[np.argmax(expected_payoffs)] = True
+    #         k = 1
+
+    #     br_probs = (tie_mask.astype(float) / k).tolist()
+    #     return dict(zip(available_strategies, br_probs))
 
 class SimulatedAgent(RestrictedTrustAgent):
     def __init__(
@@ -423,6 +466,14 @@ class RestrictedTrustGame:
         p2_strategy_probs = np.array([p2_strategy.get(s, 0) for s in self.p2_strategies])
         p2_simulation_strategy_probs = np.array([p2_simulation_strategy.get(s, 0) for s in self.p2_strategies])
         return(np.mean(np.abs(p2_strategy_probs - p2_simulation_strategy_probs)))
+
+    ## alternative version using total variation distance to avoid dependence on number of actions
+    # def simulation_error(self, p2_true: Dict[str, float], p2_hat: Dict[str, float]) -> float:
+    #     v_true = np.array([p2_true.get(s, 0.0) for s in self.p2_strategies], float)
+    #     v_hat  = np.array([p2_hat.get(s, 0.0)  for s in self.p2_strategies], float)
+    #     v_true = v_true / v_true.sum() if v_true.sum() > 0 else np.full_like(v_true, 1/len(v_true))
+    #     v_hat  = v_hat  / v_hat.sum()  if v_hat.sum()  > 0 else np.full_like(v_hat,  1/len(v_hat))
+    #     return 0.5 * np.abs(v_true - v_hat).sum()  # TV in [0,1]
         
     def get_expected_payoffs(self, p1_strategy: Dict[str, float], p2_strategy: Dict[str, float]) -> Tuple[float, float]:
         """
